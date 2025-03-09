@@ -663,6 +663,7 @@ function mapWASDToArrowKeys(keyCode) {
     case 'KeyZ': return 'ArrowUp';
     case 'KeyA': return 'ArrowLeft';
     case 'KeyD': return 'ArrowRight';
+    case 'KeyX': return 'Space';
     default: return keyCode;
   }
 }
