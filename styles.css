@@ -1,0 +1,528 @@
+/* Base element styling */
+* {
+    touch-action: manipulation;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: #fff;
+    font-family: sans-serif;
+    font-size: 16px;
+}
+
+a {
+    color: #66ccff;
+    text-decoration: none;
+}
+
+strong {
+    font-family: 'Anta', system-ui;
+}
+
+/* Layout */
+#pageContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 1.875em;
+}
+
+#leftColumn {
+    flex: 1;
+    box-sizing: border-box;
+    padding: 0.625em;
+    max-width: calc(100% - 20.625em);
+    margin: 0 auto;
+    transition: max-width 0.3s ease, margin 0.3s ease;
+}
+
+#gameTitle {
+    text-align: center;
+    font-size: 4em;
+    margin: 0.5em 0;
+    font-family: 'Orbitron', system-ui;
+}
+
+/* Canvas and game elements */
+.canvasContainer {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background: #000;
+    box-sizing: border-box;
+    transition: max-width 0.3s ease;
+}
+
+#gameCanvas {
+    width: 100%;
+    background: #111;
+    border: 1px solid #444;
+    height: auto;
+    display: block;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#instructions {
+    max-width: 800px;
+    margin: 10px auto;
+    line-height: 1.4;
+}
+
+/* Sidebar */
+#sidebarContainer {
+    position: relative;
+    width: 18.75em;
+    box-sizing: border-box;
+    padding: 0.625em;
+    flex-shrink: 0;
+    transition: width 0.3s ease, margin 0.3s ease;
+}
+
+#sidebarContainer.closed {
+    margin-right: 2.5em;
+}
+
+#toggleSidebar {
+    position: absolute;
+    top: 0.625em;
+    width: 2.5em;
+    height: 2.5em;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.3s ease;
+}
+
+#sidePanel {
+    background: #222;
+    height: 98vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+#sidePanel h2 {
+    font-family: 'Anta', system-ui;
+    margin: 0 0 1em 0;
+    text-align: center;
+    font-size: 1.5em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #444;
+    position: sticky;
+    top: 0;
+    background: #222;
+    z-index: 1;
+    margin-bottom: 0.5em;
+}
+
+#sidePanel .articleList {
+    overflow-y: auto;
+    flex: 1;
+    padding-top: 0.5em;
+}
+
+/* Article snippets */
+.articleSnippet {
+    background: #333;
+    border-radius: 0.3125em;
+    margin-bottom: 0.625em;
+    padding: 0.625em;
+    animation: 1s linear fadein;
+}
+
+.articleSnippet strong {
+    font-family: 'Anta', system-ui;
+    font-size: 1.1em;
+}
+
+.articleSnippet div:not(.extraInfo) {
+    font-size: 0.9em;
+    margin-top: 0.3em;
+    line-height: 1.4;
+}
+
+.articleSnippet a {
+    color: #66ccff;
+    text-decoration: none;
+    font-family: 'Anta', system-ui;
+}
+
+.articleSnippet .extraInfo {
+    font-size: 0.75em;
+    color: #ccc;
+    margin-top: 0.3125em;
+}
+
+.articleSnippet img {
+    max-width: 100%;
+    max-height: 150px;
+    height: auto;
+    width: 100%;
+    display: block;
+    margin: 0.3125em 0;
+    border-radius: 0.1875em;
+    object-fit: cover;
+}
+
+.articleSnippet--new {
+    background-color: #445566;
+}
+
+.tag {
+    margin-left: 6px;
+    position: relative;
+    top: -3px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    display: inline-block;
+    color: #fff;
+}
+
+.tag--lang {
+    background: #666;
+}
+
+.tag--new {
+    background: #6699cc;
+}
+
+/* Game settings controls */
+.gameButton {
+    position: absolute;
+    padding: 8px;
+    background: #444;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.gameButton:hover {
+    background: #555;
+}
+
+#fullscreenButton {
+    top: 10px;
+    right: 10px;
+}
+
+#muteButton {
+    top: 10px;
+}
+
+#muteButton svg {
+    display: block;
+}
+
+#toggleControlsButton {
+    top: 10px;
+    right: 90px;
+}
+
+/* Mobile controls */
+#mobileControls {
+    position: fixed;
+    bottom: env(safe-area-inset-bottom, 0);
+    left: 0;
+    padding: 0 10px;
+    z-index: 2000;
+    pointer-events: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#mobileControls button {
+    width: min(45px, 11vw);
+    height: min(45px, 11vw);
+    font-size: min(20px, 5vw);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+    margin: 0.3125em;
+    border-radius: 0.3125em;
+    transition: opacity 0.1s, transform 0.1s;
+    cursor: pointer;
+}
+
+#mobileControls button:active {
+    opacity: 0.7;
+}
+
+#mobileControls button.pressed {
+    opacity: 0.7;
+    transform: scale(0.95);
+}
+
+.controlRow {
+    display: flex;
+    justify-content: center;
+    margin: 5px 0;
+}
+
+.horizontalButtons {
+    display: flex;
+    gap: 2em;
+}
+
+.mobileLeft {
+    position: absolute;
+    bottom: 0.5em;
+    left: 0.5em;
+    width: min-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px;
+    border-radius: 12px;
+    pointer-events: auto;
+}
+
+.mobileRight {
+    position: absolute;
+    bottom: 0.5em;
+    right: 0.5em;
+    width: min-content;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+.mobilePause {
+    display: none;
+}
+
+#btnUp,
+#btnLeft,
+#btnRight {
+    width: min(50px, 12vw);
+    height: min(50px, 12vw);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: min(24px, 6vw);
+}
+
+#btnLeft {
+    content: "◀";
+}
+
+#btnRight {
+    content: "▶";
+}
+
+#btnUp {
+    content: "▲";
+}
+
+/* On-screen shoot button */
+#btnShoot {
+    width: min(50px, 12vw) !important;
+    height: min(50px, 12vw) !important;
+    background: rgba(255, 50, 50, 0.7) !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: min(50px, 12vw) !important;
+    min-height: min(50px, 12vw) !important;
+}
+
+#btnShoot svg {
+    width: 60%;
+    height: 60%;
+}
+
+/* On-screen pause button */
+#btnPause {
+    width: min(40px, 10vw) !important;
+    height: min(40px, 10vw) !important;
+    min-width: min(40px, 10vw) !important;
+    min-height: min(40px, 10vw) !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 0 !important;
+    font-family: 'Anta', system-ui;
+    font-size: min(16px, 4vw) !important;
+    background: rgba(51, 51, 51, 0.9) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+}
+
+/* Language selector */
+#languageSelector {
+    margin: 2em auto;
+    padding: 1em;
+    background: #222;
+    border-radius: 0.5em;
+}
+
+.languageSelector-title {
+    font-family: 'Anta', system-ui;
+    text-align: center;
+    margin: 1em 0;
+}
+
+.languageSelector-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: center;
+}
+
+.wikiToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.5em 1em;
+    background: #333;
+    border-radius: 0.3em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.wikiToggle:hover {
+    background: #444;
+}
+
+.wikiToggle input {
+    margin: 0;
+}
+
+.articleCount {
+    font-size: 0.8em;
+    padding: 0.2em 0.5em;
+    background: #555;
+    border-radius: 1em;
+    min-width: 1.5em;
+    text-align: center;
+    display: inline-block;
+}
+
+.wikiToggle.active .articleCount {
+    display: inline-block;
+}
+
+/* Fullscreen */
+.canvasContainer.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    z-index: 90;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+}
+
+.canvasContainer.fullscreen canvas {
+    max-height: 85vh;
+    max-width: min(calc(85vh * 4/3), 85vw);
+    width: auto;
+    height: auto;
+    margin: auto;
+    object-fit: contain;
+}
+
+/* Animations */
+@keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 900px) {
+    #pageContainer {
+        flex-direction: column;
+        gap: 0.625em;
+        margin-bottom: 100px;
+    }
+
+    #leftColumn {
+        max-width: 100%;
+    }
+
+    #sidebarContainer {
+        width: 100%;
+        margin-top: 0.625em;
+    }
+
+    #toggleSidebar {
+        display: none;
+    }
+
+    #languageSelector {
+        margin-bottom: 100px;
+    }
+
+    .canvasContainer.fullscreen~#mobileControls {
+        display: block !important;
+    }
+}
+
+@media (max-width: 900px) {
+    #gameTitle {
+        font-size: min(3em, 12vw);
+    }
+}
+
+@media (max-width: 300px) {
+    #gameTitle {
+        font-size: min(2em, 6vw);
+    }
+}
+
+@supports (-webkit-touch-callout: none) {
+    .canvasContainer.fullscreen {
+        height: 100%;
+    }
+}

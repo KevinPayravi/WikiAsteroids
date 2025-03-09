@@ -1,1 +1,218 @@
-<h1>Coming soon!</h1>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>WikiAsteroids</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anta&display=swap" rel="stylesheet">
+  <meta name="description"
+    content="A space shooter game powered by real-time Wikipedia edits. Shoot asteroids representing article changes and collect powerups from new articles and editors.">
+  <meta name="author" content="Hamstro">
+  <meta name="theme-color" content="#111111">
+  <meta property="og:title" content="WikiAsteroids - Real-time Wikipedia Space Shooter">
+  <meta property="og:description"
+    content="A space shooter game powered by real-time Wikipedia edits. Shoot asteroids representing article changes and collect powerups from new articles and editors.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://asteroids.wiki">
+  <meta property="og:image" content="https://asteroids.wiki/wikiasteroids.png">
+  <meta property="og:site_name" content="WikiAsteroids">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="pageContainer">
+    <div id="leftColumn">
+      <h1 id="gameTitle">WikiAsteroids</h1>
+      <div class="canvasContainer">
+        <div id="mobileControls">
+          <div class="mobileLeft">
+            <button id="btnUp">▲</button>
+            <div class="horizontalButtons">
+              <button id="btnLeft">◀</button>
+              <button id="btnRight">▶</button>
+            </div>
+          </div>
+          <div class="mobileRight">
+            <button id="btnPause">II</button>
+            <button id="btnShoot">
+              <svg viewBox="0 0 24 24" width="60%" height="60%">
+                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none" />
+                <circle cx="12" cy="12" r="6" stroke="white" stroke-width="2" fill="none" />
+                <circle cx="12" cy="12" r="2" fill="white" />
+                <line x1="2" y1="12" x2="6" y2="12" stroke="white" stroke-width="2" />
+                <line x1="18" y1="12" x2="22" y2="12" stroke="white" stroke-width="2" />
+                <line x1="12" y1="2" x2="12" y2="6" stroke="white" stroke-width="2" />
+                <line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600" tabindex="0"></canvas>
+        <button id="fullscreenButton" class="gameButton" aria-label="Toggle fullscreen">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path fill="#fff" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+          </svg>
+        </button>
+      </div>
+      <div id="instructions">
+        <strong>Controls:</strong><br />
+        Move with arrow keys or WAD. Spacebar to shoot. "P" to pause/unpause.
+        <br /><br />
+        <strong>Gameplay:</strong><br />
+        A classic asteroids arcade game with a Wikipedia twist!
+        Each edit to an article on Wikipedia spawns an asteroid.
+        <ul>
+          <li>The larger the edit, the larger the asteroid (and the most shots it takes to destroy).</li>
+          <li>Blue asteroids indicate additions, red asteroids indicate subtractions.</li>
+          <li>When you destroy an asteroid, an article preview shows up in the sidebar with a link to the edit.</li>
+          <li>At the bottom of this page, you can toggle edits from various language Wikipedias.</li>
+        </ul>
+        <strong>Powerups:</strong><br />
+        A newly created article spawns an "extra life" powerup.
+        A newly registered user spawns any of the other powerups.
+        <br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <path fill="#ff0000" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
+                   2 5.42 4.42 3 7.5 3 
+                   c1.74 0 3.41 0.81 4.5 2.09 
+                   C13.09 3.81 14.76 3 16.5 3 
+                   19.58 3 22 5.42 22 8.5 
+                   c0 3.78-3.4 6.86-8.55 11.54
+                   L12 21.35z" />
+        </svg>
+        Grants an extra life.<br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <circle cx="12" cy="12" r="10" stroke="#00ffff" stroke-width="2" fill="none" />
+        </svg>
+        Grants 7 seconds of invincibility.<br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <circle cx="12" cy="12" r="10" stroke="#ffff00" stroke-width="2" fill="none" stroke-dasharray="4,2" />
+        </svg>
+        Grants 7 seconds of faster bullet firing.<br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <polygon fill="#ff9900" points="22,12 16.76,13.55 20.09,17.88 14.94,16.05 15.09,21.51 
+                           12,17 8.91,21.51 9.06,16.05 3.91,17.88 7.24,13.55 2,12 
+                           7.24,10.45 3.91,6.12 9.06,7.95 8.91,2.49 12,7 15.09,2.49
+                           14.94,7.95 20.09,6.12 16.76,10.45" />
+        </svg>
+        Blows up all asteroids on screen.<br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <circle cx="12" cy="12" r="10" stroke="#9966ff" stroke-width="2" fill="none" />
+          <line x1="12" y1="12" x2="12" y2="6" stroke="#9966ff" stroke-width="2" />
+          <line x1="12" y1="12" x2="18" y2="12" stroke="#9966ff" stroke-width="2" />
+        </svg>
+        Slows all asteroids for 7 seconds.<br />
+        <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:4px;">
+          <circle cx="12" cy="6" r="3" fill="#ff66ff" />
+          <circle cx="6" cy="16" r="3" fill="#ff66ff" />
+          <circle cx="18" cy="16" r="3" fill="#ff66ff" />
+        </svg>
+        Grants 7 seconds of triple shot firing.<br /><br />
+        <strong>More info:</strong><br />
+        A <a href="https://hamstro.dev/" target="_blank">Hamstro</a> project by
+        <a href="https://kevin.payravi.dev/" target="_blank">Kevin Payravi</a>
+        <br />
+        <a href="https://github.com/KevinPayravi/WikiAsteroids" target="_blank">Source</a> -
+        <br />
+        Inspired by <a href="http://listen.hatnote.com/" target="_blank">Listen to Wikipedia</a>
+      </div>
+    </div>
+
+    <div id="sidebarContainer">
+      <button id="toggleSidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path fill="#fff" d="M15.41 16.59L10.83 12 8.59 16.59 10 18l6-6-6-6z" />
+        </svg>
+      </button>
+      <div id="sidePanel">
+        <h2>Edit Log</h2>
+        <div class="articleList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="languageSelector">
+    <h2 class="languageSelector-title">Select Wikipedias to Include</h2>
+    <div class="languageSelector-container">
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="enwiki" checked> English
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="dewiki"> Deutsch
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="eswiki"> Español
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="frwiki"> Français
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="jawiki"> 日本語
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="ruwiki"> Русский
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="zhwiki"> 中文
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="ptwiki"> Português
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="itwiki"> Italiano
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="plwiki"> Polski
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="nlwiki"> Nederlands
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="svwiki"> Svenska
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="viwiki"> Tiếng Việt
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="trwiki"> Türkçe
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="ukwiki"> Українська
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="arwiki"> العربية
+        <span class="articleCount">0</span>
+      </label>
+      <label class="wikiToggle">
+        <input type="checkbox" data-wiki="fawiki"> فارسی
+        <span class="articleCount">0</span>
+      </label>
+    </div>
+  </div>
+
+  <script type="module" src="index.js"></script>
+</body>
+
+</html>
