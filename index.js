@@ -660,6 +660,7 @@ function handleEventSourceError(err) {
 function mapWASDToArrowKeys(keyCode) {
   switch (keyCode) {
     case 'KeyW': return 'ArrowUp';
+    case 'KeyZ': return 'ArrowUp';
     case 'KeyA': return 'ArrowLeft';
     case 'KeyD': return 'ArrowRight';
     default: return keyCode;
