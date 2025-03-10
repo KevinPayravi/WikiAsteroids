@@ -1183,6 +1183,15 @@ function update(dt) {
     }
   }
 
+  // Play warning sound when powerups are about to end
+  if (
+    (player.shieldFrames > 0 && player.shieldFrames <= 120 * dt) ||
+    (player.fasterFireFrames > 0 && player.fasterFireFrames <= 120 * dt) ||
+    (player.tripleShotFrames > 0 && player.tripleShotFrames <= 120 * dt)
+  ) {
+    SoundManager.play('powerupEnd');
+  }
+
   updateExplosions();
 }
 
