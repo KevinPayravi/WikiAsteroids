@@ -35,7 +35,9 @@ const GAME_CONFIG = {
     DAMAGE_INVULN_FRAMES: 180
   },
   WIKI: {
-    SELECTED_WIKIS: new Set(['enwiki']),
+    SELECTED_WIKIS: new Set(
+      JSON.parse(localStorage.getItem('selectedWikis')) || ['enwiki']
+    ),
     WIKI_COUNTS: {}
   },
   TIME: {
@@ -607,11 +609,11 @@ function initializeEventSource() {
 initializeEventSource();
 
 const WIKI_TO_LANG = {
-  enwiki: 'EN', dewiki: 'DE', eswiki: 'ES', frwiki: 'FR',
-  jawiki: 'JA', ruwiki: 'RU', zhwiki: 'ZH', ptwiki: 'PT',
-  itwiki: 'IT', plwiki: 'PL', nlwiki: 'NL', svwiki: 'SV',
-  viwiki: 'VI', trwiki: 'TR', ukwiki: 'UK', arwiki: 'AR',
-  fawiki: 'FA'
+  enwiki: 'EN', dewiki: 'DE', eswiki: 'ES', euwiki: 'EU',
+  frwiki: 'FR', jawiki: 'JA', ruwiki: 'RU', zhwiki: 'ZH',
+  ptwiki: 'PT', itwiki: 'IT', plwiki: 'PL', nlwiki: 'NL',
+  svwiki: 'SV', viwiki: 'VI', trwiki: 'TR', ukwiki: 'UK',
+  arwiki: 'AR', fawiki: 'FA'
 };
 
 function handleWikiEvent(event) {
@@ -1567,11 +1569,9 @@ window.addEventListener('unload', () => {
 // ------------------------------------------------------
 document.querySelectorAll('.wikiToggle input').forEach(checkbox => {
   const wiki = checkbox.dataset.wiki;
-  const savedWikis = JSON.parse(localStorage.getItem('selectedWikis')) || ['enwiki'];
-  checkbox.checked = savedWikis.includes(wiki);
+  checkbox.checked = GAME_CONFIG.WIKI.SELECTED_WIKIS.has(wiki);
   if (checkbox.checked) {
     checkbox.parentElement.classList.add('active');
-    GAME_CONFIG.WIKI.SELECTED_WIKIS.add(wiki);
   }
   const countSpan = checkbox.parentElement.querySelector('.articleCount');
   if (countSpan) {
@@ -1934,7 +1934,6 @@ document.head.appendChild(document.createElement('style'));
 addMuteButton();
 addToggleControlsButton();
 
-// Add after gameState initialization
 const timeState = {
   lastTime: 0,
   deltaTime: 0,
