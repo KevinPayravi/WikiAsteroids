@@ -616,11 +616,11 @@ function initializeEventSource() {
 initializeEventSource();
 
 const WIKI_TO_LANG = {
-  enwiki: 'EN', dewiki: 'DE', eswiki: 'ES', euwiki: 'EU',
-  frwiki: 'FR', jawiki: 'JA', ruwiki: 'RU', zhwiki: 'ZH',
-  ptwiki: 'PT', itwiki: 'IT', plwiki: 'PL', nlwiki: 'NL',
-  svwiki: 'SV', viwiki: 'VI', trwiki: 'TR', ukwiki: 'UK',
-  arwiki: 'AR', fawiki: 'FA'
+  enwiki: 'EN', cawiki: 'CA', dewiki: 'DE', eswiki: 'ES',
+  euwiki: 'EU', frwiki: 'FR', jawiki: 'JA', ruwiki: 'RU',
+  zhwiki: 'ZH', ptwiki: 'PT', itwiki: 'IT', plwiki: 'PL',
+  nlwiki: 'NL', svwiki: 'SV', viwiki: 'VI', trwiki: 'TR',
+  ukwiki: 'UK', arwiki: 'AR', fawiki: 'FA'
 };
 
 function handleWikiEvent(event) {
