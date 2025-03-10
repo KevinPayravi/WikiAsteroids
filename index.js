@@ -37,6 +37,10 @@ const GAME_CONFIG = {
   WIKI: {
     SELECTED_WIKIS: new Set(['enwiki']),
     WIKI_COUNTS: {}
+  },
+  TIME: {
+    FIXED_TIMESTEP: 1000 / 60,  // Target 60 FPS
+    MAX_DELTA: 1000 / 30 // Cap delta if game falls behind
   }
 };
 
@@ -955,18 +959,14 @@ const gamepadController = {
 // ------------------------------------------------------
 // MAIN GAME UPDATE
 // ------------------------------------------------------
-function update() {
-  if (gameState.paused || !gameState.gameStarted) return;
 
-  if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
-    SoundManager.startThrust();
-  } else {
-    SoundManager.stopThrust();
-  }
+function update(dt) {
+  if (gameState.paused) return;
 
   if (gameState.gameOverTimer > 0) {
-    gameState.gameOverTimer--;
-    if (gameState.gameOverTimer === 0) {
+    gameState.gameOverTimer -= dt * 60;
+    if (gameState.gameOverTimer <= 0) {
+      gameState.gameOverTimer = 0;
       gameState.gameOver = true;
       SoundManager.stopThrust();
       const storedHighScore = localStorage.getItem('highScore') || 0;
@@ -978,41 +978,53 @@ function update() {
     return;
   }
 
+  // Player rotation and movement
   if (gameState.keys.ArrowLeft || gameState.keysGamepad.ArrowLeft) {
-    player.angle -= player.rotationSpeed;
+    player.angle -= player.rotationSpeed * dt * 60;
   }
   if (gameState.keys.ArrowRight || gameState.keysGamepad.ArrowRight) {
-    player.angle += player.rotationSpeed;
+    player.angle += player.rotationSpeed * dt * 60;
   }
   if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
-    player.speed = Math.min(player.speed + 0.2, player.maxSpeed);
+    player.speed = Math.min(player.speed + 0.2 * dt * 60, player.maxSpeed);
   } else {
-    player.speed *= player.friction;
+    player.speed *= Math.pow(player.friction, dt * 60);
   }
 
-  player.x += player.speed * Math.cos(player.angle);
-  player.y += player.speed * Math.sin(player.angle);
+  if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
+    SoundManager.startThrust();
+  } else {
+    SoundManager.stopThrust();
+  }
+
+  // Update player position
+  player.x += player.speed * Math.cos(player.angle) * dt * 60;
+  player.y += player.speed * Math.sin(player.angle) * dt * 60;
   wrapPosition(player);
 
   if (gameState.keys.Space || gameState.keysGamepad.Space) {
     shoot();
   }
 
-  if (player.damageInvulnFrames > 0) player.damageInvulnFrames--;
-  if (player.shieldFrames > 0) player.shieldFrames--;
-  if (player.fasterFireFrames > 0) player.fasterFireFrames--;
-  if (player.tripleShotFrames > 0) player.tripleShotFrames--;
+  // Update timers
+  if (player.damageInvulnFrames > 0) player.damageInvulnFrames -= dt * 60;
+  if (player.shieldFrames > 0) player.shieldFrames -= dt * 60;
+  if (player.fasterFireFrames > 0) player.fasterFireFrames -= dt * 60;
+  if (player.tripleShotFrames > 0) player.tripleShotFrames -= dt * 60;
+
+  // Update slow motion
   if (player.slowMotionFrames > 0) {
-    player.slowMotionFrames--;
-    if (player.slowMotionFrames === 0) {
+    player.slowMotionFrames -= dt * 60;
+    if (player.slowMotionFrames <= 0) {
+      player.slowMotionFrames = 0;
       player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
-    } else if (player.slowMotionTransition > 0) {
-      player.slowMotionTransition--;
     }
-  } else if (player.slowMotionTransition > 0) {
-    player.slowMotionTransition--;
+  }
+  if (player.slowMotionTransition > 0) {
+    player.slowMotionTransition -= dt * 60;
   }
 
+  // Calculate slow motion effect
   let speedMultiplier = 1;
   if (player.slowMotionFrames > 0) {
     if (player.slowMotionTransition > 0) {
@@ -1026,12 +1038,13 @@ function update() {
     speedMultiplier = 0.2 + 0.8 * progress;
   }
 
+  // Update bullets
   for (let i = player.bullets.length - 1; i >= 0; i--) {
     const bullet = player.bullets[i];
     const oldX = bullet.x;
     const oldY = bullet.y;
-    bullet.x += bullet.vx;
-    bullet.y += bullet.vy;
+    bullet.x += bullet.vx * dt * 60;
+    bullet.y += bullet.vy * dt * 60;
     wrapPosition(bullet);
 
     if (bullet.traveledDistance === undefined) bullet.traveledDistance = 0;
@@ -1044,10 +1057,11 @@ function update() {
     }
   }
 
+  // Update targets
   for (let i = gameState.targets.length - 1; i >= 0; i--) {
     const t = gameState.targets[i];
-    t.x += t.speed * Math.cos(t.angleToCenter) * speedMultiplier;
-    t.y += t.speed * Math.sin(t.angleToCenter) * speedMultiplier;
+    t.x += t.speed * Math.cos(t.angleToCenter) * speedMultiplier * dt * 60;
+    t.y += t.speed * Math.sin(t.angleToCenter) * speedMultiplier * dt * 60;
     wrapPosition(t);
 
     if (t.isAsteroid) {
@@ -1081,8 +1095,7 @@ function update() {
     const distSq = dx * dx + dy * dy;
     const combined = (t.isAsteroid ? t.healthBasedRadius : 20) + player.radius;
     if (distSq < combined * combined) {
-      const isInvincible =
-        player.shieldFrames > 0 || player.damageInvulnFrames > 0;
+      const isInvincible = player.shieldFrames > 0 || player.damageInvulnFrames > 0;
 
       if (t.isHeart) {
         SoundManager.play('acquireHeart');
@@ -1125,7 +1138,6 @@ function update() {
           }
         });
         gameState.score += pointsGained;
-        break;
       } else if (t.isSlowMotion) {
         SoundManager.play('acquireSlowMotion');
         const removed = gameState.targets.splice(i, 1)[0];
@@ -1133,12 +1145,9 @@ function update() {
         SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         if (player.slowMotionFrames === 0) {
           if (player.slowMotionTransition > 0) {
-            player.slowMotionTransition =
-              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION -
-              player.slowMotionTransition;
+            player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION - player.slowMotionTransition;
           } else {
-            player.slowMotionTransition =
-              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+            player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
           }
         }
         player.slowMotionFrames = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION;
@@ -1158,7 +1167,6 @@ function update() {
           if (removed.labelCanvas) removed.labelCanvas = null;
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
           gameState.asteroidCount--;
-          i--;
         }
         gameState.lives--;
         if (gameState.lives <= 0) {
@@ -1172,15 +1180,8 @@ function update() {
       }
     }
   }
-  updateExplosions();
 
-  if (
-    player.shieldFrames === 60 ||
-    player.fasterFireFrames === 60 ||
-    player.tripleShotFrames === 60
-  ) {
-    SoundManager.play('powerupEnd');
-  }
+  updateExplosions();
 }
 
 // ------------------------------------------------------
@@ -1511,18 +1512,31 @@ function startGameLoop() {
     animationFrameId = null;
   }
 
-  const gameLoop = () => {
+  const gameLoop = (timestamp) => {
+    timeState.currentTime = timestamp;
+    if (!timeState.lastTime) {
+      timeState.lastTime = timestamp;
+    }
+
+    // Calculate delta time in seconds
+    timeState.deltaTime = Math.min(
+      (timeState.currentTime - timeState.lastTime),
+      GAME_CONFIG.TIME.MAX_DELTA
+    ) / 1000;
+
+    timeState.lastTime = timeState.currentTime;
+
     gamepadController.update();
 
     if (!gameState.gameOver && gameState.gameStarted) {
-      update();
+      update(timeState.deltaTime);
     }
 
     draw();
     animationFrameId = requestAnimationFrame(gameLoop);
   };
 
-  gameLoop();
+  animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 function restartGame() {
@@ -1919,3 +1933,10 @@ document.head.appendChild(document.createElement('style'));
 
 addMuteButton();
 addToggleControlsButton();
+
+// Add after gameState initialization
+const timeState = {
+  lastTime: 0,
+  deltaTime: 0,
+  currentTime: 0
+};
