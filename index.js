@@ -1060,8 +1060,11 @@ function update(dt) {
   }
 
   // Update targets
-  for (let i = gameState.targets.length - 1; i >= 0; i--) {
-    const t = gameState.targets[i];
+  const targetsToProcess = [...gameState.targets];
+  for (let i = targetsToProcess.length - 1; i >= 0; i--) {
+    const t = targetsToProcess[i];
+    if (!t) continue;
+    
     t.x += t.speed * Math.cos(t.angleToCenter) * speedMultiplier * dt * 60;
     t.y += t.speed * Math.sin(t.angleToCenter) * speedMultiplier * dt * 60;
     wrapPosition(t);
