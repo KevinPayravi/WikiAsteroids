@@ -45,8 +45,15 @@ strong {
 #gameTitle {
     text-align: center;
     font-size: 4em;
-    margin: 0.5em 0;
+    margin: 0.5em 0 0 0;
     font-family: 'Orbitron', system-ui;
+}
+
+#gameSubTitle {
+    text-align: center;
+    font-size: 1em;
+    margin: 0 0 1em 0;
+    font-family: 'Anta', system-ui;
 }
 
 /* Canvas and game elements */
