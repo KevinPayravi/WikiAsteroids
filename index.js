@@ -41,8 +41,8 @@ const GAME_CONFIG = {
     WIKI_COUNTS: {}
   },
   TIME: {
-    FIXED_TIMESTEP: 1000 / 60,  // Target 60 FPS
-    MAX_DELTA: 1000 / 30 // Cap delta if game falls behind
+    FIXED_TIMESTEP: 1000 / 60, // Target 60 FPS
+    MAX_DELTA: 1000 / 30       // Cap delta if game falls behind
   }
 };
 
@@ -270,6 +270,7 @@ const SoundManager = {
   }
 };
 
+// Initialize SoundManager after first click
 document.addEventListener(
   'click',
   () => {
@@ -330,6 +331,7 @@ function createOffscreenLabelCanvas(text, font = '14px Anta', color = '#fff') {
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d');
   tempCtx.font = font;
+
   const padding = 6;
   const width = tempCtx.measureText(text).width + padding * 2;
   const height = 24; // approximate line height
@@ -366,8 +368,16 @@ const SpawnManager = {
 
   spawnOffscreenTarget(title) {
     const spawnEdge = Math.floor(Math.random() * 4);
-    const x = spawnEdge % 2 === 0 ? Math.random() * W : spawnEdge === 1 ? W : 0;
-    const y = spawnEdge % 2 === 0 ? (spawnEdge === 0 ? H : 0) : Math.random() * H;
+    const x = spawnEdge % 2 === 0
+      ? Math.random() * W
+      : spawnEdge === 1
+        ? W
+        : 0;
+    const y = spawnEdge % 2 === 0
+      ? spawnEdge === 0
+        ? H
+        : 0
+      : Math.random() * H;
     return {
       x,
       y,
@@ -406,7 +416,6 @@ const SpawnManager = {
 
   spawnPowerup(type, title, metadata) {
     if (gameState.paused || !gameState.gameStarted || gameState.gameOver) return;
-
     SoundManager.play('powerupSpawn');
 
     const target = this.spawnOffscreenTarget(title);
@@ -581,8 +590,6 @@ class SidebarManager {
     this.toggleButton.style.left = this.isOpen ? '-30px' : '0px';
   }
 
-  // NOTE: This replaces the SVG icon with chevron text.
-  // It may be intentional. Preserving to avoid changing behavior.
   updateChevronDirection() {
     const chevron = this.isOpen ? '»' : '«';
     this.toggleButton.innerHTML = chevron;
@@ -665,12 +672,17 @@ function handleEventSourceError(err) {
 // ------------------------------------------------------
 function mapWASDToArrowKeys(keyCode) {
   switch (keyCode) {
-    case 'KeyW': return 'ArrowUp';
-    case 'KeyZ': return 'ArrowUp';
-    case 'KeyA': return 'ArrowLeft';
-    case 'KeyD': return 'ArrowRight';
-    case 'KeyX': return 'Space';
-    default: return keyCode;
+    case 'KeyW':
+    case 'KeyZ':
+      return 'ArrowUp';
+    case 'KeyA':
+      return 'ArrowLeft';
+    case 'KeyD':
+      return 'ArrowRight';
+    case 'KeyX':
+      return 'Space';
+    default:
+      return keyCode;
   }
 }
 
@@ -681,10 +693,12 @@ const keyboardController = {
     window.addEventListener('keydown', this.boundKeyDown);
     window.addEventListener('keyup', this.boundKeyUp);
   },
+
   destroy() {
     window.removeEventListener('keydown', this.boundKeyDown);
     window.removeEventListener('keyup', this.boundKeyUp);
   },
+
   handleKeyDown(e) {
     const mappedCode = mapWASDToArrowKeys(e.code);
 
@@ -699,12 +713,11 @@ const keyboardController = {
       case 'KeyR':
         restartGame();
         return;
-      case 'KeyM':
-        {
-          const isMuted = SoundManager.toggleMute();
-          updateMuteButtonIcon(document.getElementById('muteButton'), isMuted);
-        }
+      case 'KeyM': {
+        const isMuted = SoundManager.toggleMute();
+        updateMuteButtonIcon(document.getElementById('muteButton'), isMuted);
         return;
+      }
       case 'KeyF':
         toggleFullscreen();
         return;
@@ -717,9 +730,7 @@ const keyboardController = {
         return;
     }
 
-    if (
-      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)
-    ) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)) {
       e.preventDefault();
       if (mappedCode === 'Space' && !gameState.gameStarted && !gameState.gameOver) {
         startGame();
@@ -730,12 +741,11 @@ const keyboardController = {
     }
     gameState.keys[mappedCode] = true;
   },
+
   handleKeyUp(e) {
     const mappedCode = mapWASDToArrowKeys(e.code);
 
-    if (
-      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)
-    ) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)) {
       e.preventDefault();
       updateMobileButtonState(mappedCode, false);
     }
@@ -757,11 +767,10 @@ function initMobileControls() {
       startGame();
     } else if (!gameState.paused && !gameState.gameOver) {
       shoot();
-      // setInterval isn't exact, so we use a low interval of 10ms
-      // to repeatedly attempt to shoot
       shootInterval = setInterval(shoot, 10);
     }
   };
+
   const stopShooting = () => {
     if (shootInterval) {
       clearInterval(shootInterval);
@@ -795,6 +804,7 @@ function initMobileControls() {
     mobileControls.shoot.addEventListener(eventName, stopShooting);
   });
 }
+
 if (
   mobileControls.up &&
   mobileControls.left &&
@@ -859,6 +869,7 @@ function spawnFinalExplosion(x, y) {
   const numSparks = 50;
   const speed = 5;
   const lifetime = 120;
+
   for (let i = 0; i < numSparks; i++) {
     const angle = (Math.PI * 2 * i) / numSparks;
     const velocity = speed * (0.5 + Math.random());
@@ -961,7 +972,6 @@ const gamepadController = {
 // ------------------------------------------------------
 // MAIN GAME UPDATE
 // ------------------------------------------------------
-
 function update(dt) {
   if (gameState.paused) return;
 
@@ -1004,6 +1014,7 @@ function update(dt) {
   player.y += player.speed * Math.sin(player.angle) * dt * 60;
   wrapPosition(player);
 
+  // Shoot laser for spacebar
   if (gameState.keys.Space || gameState.keysGamepad.Space) {
     shoot();
   }
@@ -1030,13 +1041,15 @@ function update(dt) {
   let speedMultiplier = 1;
   if (player.slowMotionFrames > 0) {
     if (player.slowMotionTransition > 0) {
-      const progress = 1 - player.slowMotionTransition / GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+      const progress = 1 - player.slowMotionTransition /
+        GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
       speedMultiplier = 1 - 0.8 * progress;
     } else {
       speedMultiplier = 0.2;
     }
   } else if (player.slowMotionTransition > 0) {
-    const progress = 1 - player.slowMotionTransition / GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+    const progress = 1 - player.slowMotionTransition /
+      GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
     speedMultiplier = 0.2 + 0.8 * progress;
   }
 
@@ -1045,6 +1058,7 @@ function update(dt) {
     const bullet = player.bullets[i];
     const oldX = bullet.x;
     const oldY = bullet.y;
+
     bullet.x += bullet.vx * dt * 60;
     bullet.y += bullet.vy * dt * 60;
     wrapPosition(bullet);
@@ -1054,6 +1068,7 @@ function update(dt) {
     const dyFrame = bullet.y - oldY;
     const distFrame = Math.sqrt(dxFrame * dxFrame + dyFrame * dyFrame);
     bullet.traveledDistance += distFrame;
+
     if (bullet.traveledDistance > GAME_CONFIG.GAMEPLAY.BULLET_MAX_DISTANCE) {
       player.bullets.splice(i, 1);
     }
@@ -1064,7 +1079,7 @@ function update(dt) {
   for (let i = targetsToProcess.length - 1; i >= 0; i--) {
     const t = targetsToProcess[i];
     if (!t) continue;
-    
+
     t.x += t.speed * Math.cos(t.angleToCenter) * speedMultiplier * dt * 60;
     t.y += t.speed * Math.sin(t.angleToCenter) * speedMultiplier * dt * 60;
     wrapPosition(t);
@@ -1148,9 +1163,11 @@ function update(dt) {
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
         SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+
         if (player.slowMotionFrames === 0) {
           if (player.slowMotionTransition > 0) {
-            player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION - player.slowMotionTransition;
+            player.slowMotionTransition =
+              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION - player.slowMotionTransition;
           } else {
             player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
           }
@@ -1186,7 +1203,7 @@ function update(dt) {
     }
   }
 
-  // Play warning sound when powerups are about to end
+  // Powerup warning sound (about to end)
   if (
     (player.shieldFrames > 0 && player.shieldFrames <= 120 * dt) ||
     (player.fasterFireFrames > 0 && player.fasterFireFrames <= 120 * dt) ||
@@ -1526,7 +1543,7 @@ function startGameLoop() {
     animationFrameId = null;
   }
 
-  const gameLoop = (timestamp) => {
+  const gameLoop = timestamp => {
     timeState.currentTime = timestamp;
     if (!timeState.lastTime) {
       timeState.lastTime = timestamp;
@@ -1534,12 +1551,11 @@ function startGameLoop() {
 
     // Calculate delta time in seconds
     timeState.deltaTime = Math.min(
-      (timeState.currentTime - timeState.lastTime),
+      timeState.currentTime - timeState.lastTime,
       GAME_CONFIG.TIME.MAX_DELTA
     ) / 1000;
 
     timeState.lastTime = timeState.currentTime;
-
     gamepadController.update();
 
     if (!gameState.gameOver && gameState.gameStarted) {
@@ -1605,7 +1621,10 @@ document.querySelectorAll('.wikiToggle input').forEach(checkbox => {
     if (countSpan) {
       countSpan.textContent = '0';
     }
-    localStorage.setItem('selectedWikis', JSON.stringify([...GAME_CONFIG.WIKI.SELECTED_WIKIS]));
+    localStorage.setItem(
+      'selectedWikis',
+      JSON.stringify([...GAME_CONFIG.WIKI.SELECTED_WIKIS])
+    );
   });
 });
 
@@ -1816,6 +1835,7 @@ canvas.addEventListener('click', e => {
       startGame();
     }
   }
+
   // Restart button
   if (gameState.gameOver && gameState.restartBounds) {
     const bounds = gameState.restartBounds;
@@ -1867,7 +1887,7 @@ document.addEventListener(
   'click',
   () => {
     if (SoundManager.soundPaths.thrust) {
-      // Attempt a silent auto-play once for iOS, etc. (no placeholder comment)
+      // Intentionally left blank to trigger sound
     }
   },
   { once: true }
@@ -1898,13 +1918,15 @@ function updateMuteButtonIcon(button, isMuted) {
     : '<svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
 }
 
+// ------------------------------------------------------
+// ON-SCREEN CONTROLS TOGGLE BUTTON
+// ------------------------------------------------------
 function addToggleControlsButton() {
   const toggleButton = document.createElement('button');
   toggleButton.id = 'toggleControlsButton';
   toggleButton.className = 'gameButton';
   toggleButton.setAttribute('aria-label', 'Toggle on-screen controls');
 
-  // Decide default based on screen size
   const defaultVisible = window.innerWidth <= 900;
   const controlsVisible = localStorage.getItem('controlsVisible') !== null
     ? localStorage.getItem('controlsVisible') === 'true'
@@ -1929,7 +1951,7 @@ function addToggleControlsButton() {
 }
 
 function updateToggleControlsIcon(button, isVisible) {
-  // If visible, show a gamepad icon; if hidden, show a gamepad with an X overlay
+  // If visible, show a gamepad icon; if hidden, show a crossed-out gamepad
   button.innerHTML = isVisible
     ? `<svg width="16" height="16" viewBox="0 0 24 24">
          <path fill="#fff" d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
