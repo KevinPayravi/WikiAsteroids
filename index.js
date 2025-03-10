@@ -138,7 +138,7 @@ const player = {
   angle: 0,
   rotationSpeed: 0.05,
   speed: 0,
-  maxSpeed: 4,
+  maxSpeed: 10,
   friction: 0.98,
   color: '#00ff00',
   bullets: [],
@@ -149,7 +149,10 @@ const player = {
   slowMotionFrames: 0,
   slowMotionTransition: 0,
   tripleShotFrames: 0,
-  visible: true
+  visible: true,
+  vx: 0,
+  vy: 0,
+  thrust: 0.15
 };
 
 // ------------------------------------------------------
@@ -990,28 +993,40 @@ function update(dt) {
     return;
   }
 
-  // Player rotation and movement
+  // Player rotation
   if (gameState.keys.ArrowLeft || gameState.keysGamepad.ArrowLeft) {
     player.angle -= player.rotationSpeed * dt * 60;
   }
   if (gameState.keys.ArrowRight || gameState.keysGamepad.ArrowRight) {
     player.angle += player.rotationSpeed * dt * 60;
   }
-  if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
-    player.speed = Math.min(player.speed + 0.2 * dt * 60, player.maxSpeed);
-  } else {
-    player.speed *= Math.pow(player.friction, dt * 60);
-  }
 
+  // Add thrust in the direction the ship is facing
   if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
+    const thrustX = Math.cos(player.angle) * player.thrust * dt * 60;
+    const thrustY = Math.sin(player.angle) * player.thrust * dt * 60;
+    player.vx += thrustX;
+    player.vy += thrustY;
     SoundManager.startThrust();
   } else {
     SoundManager.stopThrust();
   }
 
-  // Update player position
-  player.x += player.speed * Math.cos(player.angle) * dt * 60;
-  player.y += player.speed * Math.sin(player.angle) * dt * 60;
+  // Apply friction
+  player.vx *= Math.pow(player.friction, dt * 60);
+  player.vy *= Math.pow(player.friction, dt * 60);
+
+  // Limit maxi speed
+  const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+  if (currentSpeed > player.maxSpeed) {
+    const scale = player.maxSpeed / currentSpeed;
+    player.vx *= scale;
+    player.vy *= scale;
+  }
+
+  // Update position based on velocity
+  player.x += player.vx * dt * 60;
+  player.y += player.vy * dt * 60;
   wrapPosition(player);
 
   // Shoot laser for spacebar
@@ -1724,6 +1739,9 @@ function resetGameState() {
   player.damageInvulnFrames = 0;
   player.tripleShotFrames = 0;
   player.visible = true;
+  player.vx = 0;
+  player.vy = 0;
+  player.thrust = 0.15;
 }
 
 // ------------------------------------------------------
