@@ -139,7 +139,7 @@ const player = {
   rotationSpeed: 0.05,
   speed: 0,
   maxSpeed: 10,
-  friction: 0.98,
+  friction: 0.985,
   color: '#00ff00',
   bullets: [],
   bulletSpeed: 7,
