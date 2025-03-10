@@ -105,7 +105,8 @@ const gameState = {
   explosions: [],
   lastShotTime: 0,
   gameOverTimer: 0,
-  asteroidCount: 0
+  asteroidCount: 0,
+  fatalArticle: null
 };
 
 // ------------------------------------------------------
@@ -1210,6 +1211,10 @@ function update(dt) {
           spawnFinalExplosion(player.x, player.y);
           player.visible = false;
           gameState.gameOverTimer = 120;
+          gameState.fatalArticle = {
+            ...t.metadata,
+            title: t.title
+          };
           SoundManager.stopThrust();
         } else {
           player.damageInvulnFrames = GAME_CONFIG.PLAYER.DAMAGE_INVULN_FRAMES;
@@ -1325,10 +1330,29 @@ function drawGameOver() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('GAME OVER', W / 2, H / 2 - 20);
+
   const highScore = localStorage.getItem('highScore') || 0;
   ctx.font = '24px Anta';
   ctx.fillText(`Score: ${gameState.score}   High Score: ${highScore}`, W / 2, H / 2 + 30);
+
   drawRestartButton();
+
+  // Display fatal article link
+  if (gameState.fatalArticle && gameState.fatalArticle.diff_url) {
+    ctx.font = '20px Anta';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Your final asteroid:', W / 2, H * 0.75);
+    ctx.fillStyle = '#66ccff';
+    ctx.fillText(gameState.fatalArticle.title, W / 2, H * 0.75 + 30);
+    const textMetrics = ctx.measureText(gameState.fatalArticle.title);
+    gameState.articleLinkBounds = {
+      x: W / 2 - textMetrics.width / 2,
+      y: H * 0.75 + 20,
+      width: textMetrics.width,
+      height: 20
+    };
+  }
+
   ctx.restore();
 }
 
@@ -1742,6 +1766,7 @@ function resetGameState() {
   player.vx = 0;
   player.vy = 0;
   player.thrust = 0.15;
+  gameState.fatalArticle = null;
 }
 
 // ------------------------------------------------------
@@ -1866,6 +1891,21 @@ canvas.addEventListener('click', e => {
       restartGame();
     }
   }
+
+  // Fatal article link
+  if (gameState.gameOver && gameState.articleLinkBounds && gameState.fatalArticle) {
+    const bounds = gameState.articleLinkBounds;
+    if (
+      x >= bounds.x &&
+      x <= bounds.x + bounds.width &&
+      y >= bounds.y &&
+      y <= bounds.y + bounds.height
+    ) {
+      const domain = gameState.fatalArticle.wiki.replace('wiki', '.wikipedia.org');
+      const articleUrl = `https://${domain}/wiki/${encodeURIComponent(gameState.fatalArticle.title)}`;
+      window.open(articleUrl, '_blank');
+    }
+  }
 });
 
 canvas.addEventListener('mousemove', e => {
@@ -1888,6 +1928,19 @@ canvas.addEventListener('mousemove', e => {
 
   if (gameState.gameOver && gameState.restartBounds) {
     const bounds = gameState.restartBounds;
+    if (
+      x >= bounds.x &&
+      x <= bounds.x + bounds.width &&
+      y >= bounds.y &&
+      y <= bounds.y + bounds.height
+    ) {
+      canvas.style.cursor = 'pointer';
+      return;
+    }
+  }
+
+  if (gameState.gameOver && gameState.articleLinkBounds) {
+    const bounds = gameState.articleLinkBounds;
     if (
       x >= bounds.x &&
       x <= bounds.x + bounds.width &&
