@@ -106,7 +106,8 @@ const gameState = {
   lastShotTime: 0,
   gameOverTimer: 0,
   asteroidCount: 0,
-  fatalArticle: null
+  fatalArticle: null,
+  lastPowerupEndSound: 0
 };
 
 // ------------------------------------------------------
@@ -980,7 +981,7 @@ function update(dt) {
   if (gameState.paused) return;
 
   if (gameState.gameOverTimer > 0) {
-    gameState.gameOverTimer -= dt * 60;
+    gameState.gameOverTimer--;
     if (gameState.gameOverTimer <= 0) {
       gameState.gameOverTimer = 0;
       gameState.gameOver = true;
@@ -1035,22 +1036,21 @@ function update(dt) {
     shoot();
   }
 
-  // Update timers
-  if (player.damageInvulnFrames > 0) player.damageInvulnFrames -= dt * 60;
-  if (player.shieldFrames > 0) player.shieldFrames -= dt * 60;
-  if (player.fasterFireFrames > 0) player.fasterFireFrames -= dt * 60;
-  if (player.tripleShotFrames > 0) player.tripleShotFrames -= dt * 60;
+  if (player.damageInvulnFrames > 0) player.damageInvulnFrames--;
+  if (player.shieldFrames > 0) player.shieldFrames--;
+  if (player.fasterFireFrames > 0) player.fasterFireFrames--;
+  if (player.tripleShotFrames > 0) player.tripleShotFrames--;
 
   // Update slow motion
   if (player.slowMotionFrames > 0) {
-    player.slowMotionFrames -= dt * 60;
+    player.slowMotionFrames--;
     if (player.slowMotionFrames <= 0) {
       player.slowMotionFrames = 0;
       player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
     }
   }
   if (player.slowMotionTransition > 0) {
-    player.slowMotionTransition -= dt * 60;
+    player.slowMotionTransition--;
   }
 
   // Calculate slow motion effect
@@ -1116,7 +1116,9 @@ function update(dt) {
             spawnExplosion(t.x, t.y);
             const removed = gameState.targets.splice(i, 1)[0];
             if (removed.labelCanvas) removed.labelCanvas = null;
-            SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+            setTimeout(() => {
+              SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+            }, 0);
             gameState.asteroidCount--;
           } else {
             SoundManager.play('pop');
@@ -1137,25 +1139,33 @@ function update(dt) {
         SoundManager.play('acquireHeart');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
         gameState.lives++;
       } else if (t.isShield) {
         SoundManager.play('acquireInvincibility');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
         player.shieldFrames = GAME_CONFIG.POWERUP.DURATION.INVINCIBILITY;
       } else if (t.isFasterFire) {
         SoundManager.play('acquireFasterFire');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
         player.fasterFireFrames = GAME_CONFIG.POWERUP.DURATION.FASTER_FIRE;
       } else if (t.isExplosion) {
         SoundManager.play('acquireExplosion');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
 
         let pointsGained = 0;
         const asteroidsToDestroy = gameState.targets.filter(obj => obj.isAsteroid);
@@ -1178,7 +1188,9 @@ function update(dt) {
         SoundManager.play('acquireSlowMotion');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
 
         if (player.slowMotionFrames === 0) {
           if (player.slowMotionTransition > 0) {
@@ -1193,7 +1205,9 @@ function update(dt) {
         SoundManager.play('acquireTripleShot');
         const removed = gameState.targets.splice(i, 1)[0];
         if (removed.labelCanvas) removed.labelCanvas = null;
-        SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        setTimeout(() => {
+          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+        }, 0);
         player.tripleShotFrames = GAME_CONFIG.POWERUP.DURATION.TRIPLE_SHOT;
       } else if (t.isAsteroid && !isInvincible) {
         SoundManager.play('damaged');
@@ -1203,7 +1217,9 @@ function update(dt) {
           spawnExplosion(t.x, t.y);
           const removed = gameState.targets.splice(i, 1)[0];
           if (removed.labelCanvas) removed.labelCanvas = null;
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          setTimeout(() => {
+            SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          }, 0);
           gameState.asteroidCount--;
         }
         gameState.lives--;
@@ -1223,13 +1239,18 @@ function update(dt) {
     }
   }
 
-  // Powerup warning sound (about to end)
+  // Powerup ending warning sound
+  const now = performance.now();
   if (
-    (player.shieldFrames > 0 && player.shieldFrames <= 120 * dt) ||
-    (player.fasterFireFrames > 0 && player.fasterFireFrames <= 120 * dt) ||
-    (player.tripleShotFrames > 0 && player.tripleShotFrames <= 120 * dt)
+    (player.shieldFrames > 0 && player.shieldFrames <= 60) ||
+    (player.fasterFireFrames > 0 && player.fasterFireFrames <= 60) ||
+    (player.tripleShotFrames > 0 && player.tripleShotFrames <= 60)
   ) {
-    SoundManager.play('powerupEnd');
+    // Only play sound if not played in last 1 second
+    if (!gameState.lastPowerupEndSound || now - gameState.lastPowerupEndSound > 1000) {
+      SoundManager.play('powerupEnd');
+      gameState.lastPowerupEndSound = now;
+    }
   }
 
   updateExplosions();
