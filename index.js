@@ -3,6 +3,11 @@
 // ------------------------------------------------------
 // CONSTANTS & GAME CONFIGURATIONS
 // ------------------------------------------------------
+const EVENT_STREAM_CONFIG = {
+  RECONNECT_INTERVAL: 14 * 60 * 1000, // Reconnect every 14 minutes (before 15-minute timeout)
+  reconnectTimer: null
+};
+
 const POWERUP_TYPES = {
   HEART: 'heart',
   SHIELD: 'shield',
@@ -610,14 +615,32 @@ class SidebarManager {
 // Recent changes from Wikimedia event stream
 // ------------------------------------------------------
 let eventSource = null;
+
 function initializeEventSource() {
   if (eventSource) {
     eventSource.close();
   }
+  
+  // Clear any existing reconnect timer
+  if (EVENT_STREAM_CONFIG.reconnectTimer) {
+    clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
+  }
+
   eventSource = new EventSource('https://stream.wikimedia.org/v2/stream/recentchange');
   eventSource.onmessage = handleWikiEvent;
   eventSource.onerror = handleEventSourceError;
+
+  // Set up reconnection timer
+  EVENT_STREAM_CONFIG.reconnectTimer = setTimeout(() => {
+    initializeEventSource();
+  }, EVENT_STREAM_CONFIG.RECONNECT_INTERVAL);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!document.hidden) {
+    initializeEventSource();
+  }
+});
 
 // Close EventStream when page is not active
 document.addEventListener('visibilitychange', () => {
@@ -626,14 +649,16 @@ document.addEventListener('visibilitychange', () => {
       eventSource.close();
       eventSource = null;
     }
+    if (EVENT_STREAM_CONFIG.reconnectTimer) {
+      clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
+      EVENT_STREAM_CONFIG.reconnectTimer = null;
+    }
   } else {
     if (!eventSource) {
       initializeEventSource();
     }
   }
 });
-
-initializeEventSource();
 
 const WIKI_TO_LANG = {
   enwiki: 'EN', cawiki: 'CA', dewiki: 'DE', eswiki: 'ES',
@@ -1664,16 +1689,6 @@ startGameLoop();
 // SIDEBAR INIT
 // ------------------------------------------------------
 const sidebarManager = new SidebarManager();
-
-// ------------------------------------------------------
-// CLEANUP ON PAGE UNLOAD
-// ------------------------------------------------------
-window.addEventListener('unload', () => {
-  if (eventSource) {
-    eventSource.close();
-  }
-  SoundManager.stopThrust();
-});
 
 // ------------------------------------------------------
 // LANGUAGE SELECTOR
