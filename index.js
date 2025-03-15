@@ -618,6 +618,21 @@ function initializeEventSource() {
   eventSource.onmessage = handleWikiEvent;
   eventSource.onerror = handleEventSourceError;
 }
+
+// Close EventStream when page is not active
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+  } else {
+    if (!eventSource) {
+      initializeEventSource();
+    }
+  }
+});
+
 initializeEventSource();
 
 const WIKI_TO_LANG = {
@@ -634,6 +649,14 @@ function handleWikiEvent(event) {
     const data = JSON.parse(event.data);
     if (data.bot) return;
     if (!GAME_CONFIG.WIKI.SELECTED_WIKIS.has(data.wiki)) return;
+
+    // Ignore events older than 5 seconds,
+    // to avoid flood of events from lag or context switchng
+    const eventTime = new Date(data.meta.dt).getTime();
+    const now = Date.now();
+    if (now - eventTime > 5000) {
+      return;
+    }
 
     const langCode = WIKI_TO_LANG[data.wiki] || data.wiki.replace('wiki', '').toUpperCase();
     if (gameState.gameStarted && !gameState.paused && !gameState.gameOver) {
