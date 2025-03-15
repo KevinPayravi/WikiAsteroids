@@ -651,7 +651,7 @@ function handleWikiEvent(event) {
     if (!GAME_CONFIG.WIKI.SELECTED_WIKIS.has(data.wiki)) return;
 
     // Ignore events older than 5 seconds,
-    // to avoid flood of events from lag or context switchng
+    // to avoid flood of events from lag or context switching
     const eventTime = new Date(data.meta.dt).getTime();
     const now = Date.now();
     if (now - eventTime > 5000) {
