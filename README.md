@@ -11,6 +11,11 @@ Edits are pulled via Wikimedia's [EventStreams](https://wikitech.wikimedia.org/w
 This project was inspired by [Listen to Wikipedia](http://listen.hatnote.com/), a great project that lets you see and hear edits as they happen on Wikipedia.
 
 # Credits
+## Fonts
+* [Anta](https://fonts.google.com/specimen/Anta) font by Sergej Lebedev ([SIL Open Font License, Version 1.1](https://fonts.google.com/specimen/Anta/license))
+* [Orbitron](https://fonts.google.com/specimen/Orbitron) font by Matt McInerney ([SIL Open Font License, Version 1.1](https://fonts.google.com/specimen/Orbitron/license))
+
+## Sound
 In game sound effects are from freesound.org:
 * Ship damaged sound by [CogFireStudios](https://freesound.org/people/CogFireStudios/) ([source](https://freesound.org/people/CogFireStudios/sounds/420356/))
 * Final explosion sound by [SamsterBirdies](https://freesound.org/people/SamsterBirdies/) ([source](https://freesound.org/people/SamsterBirdies/sounds/621000/))
