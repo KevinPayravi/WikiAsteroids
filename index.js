@@ -46,7 +46,6 @@ const GAME_CONFIG = {
     WIKI_COUNTS: {}
   },
   TIME: {
-    FIXED_TIMESTEP: 1000 / 60, // Target 60 FPS
     MAX_DELTA: 1000 / 30       // Cap delta if game falls behind
   }
 };
@@ -1465,38 +1464,63 @@ function drawGameOver() {
 }
 
 function drawPlayer() {
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(player.angle);
+  const cos = Math.cos(player.angle);
+  const sin = Math.sin(player.angle);
+  
+  // Original player triangle points
+  const points = [
+    { x: player.radius, y: 0 },
+    { x: -player.radius, y: player.radius / 2 },
+    { x: -player.radius, y: -player.radius / 2 }
+  ];
+  
+  // Rotate and translate
+  const worldPoints = points.map(p => ({
+    x: player.x + (p.x * cos - p.y * sin),
+    y: player.y + (p.x * sin + p.y * cos)
+  }));
 
   // Thrust flame
   if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
-    ctx.beginPath();
-    ctx.moveTo(-player.radius, player.radius * 0.3);
-    ctx.lineTo(-player.radius - 10, 0);
-    ctx.lineTo(-player.radius, -player.radius * 0.3);
-    ctx.closePath();
+    // Thrust flame triangle points
+    const thrustPoints = [
+      { x: -player.radius, y: player.radius * 0.3 },
+      { x: -player.radius - 10, y: 0 },
+      { x: -player.radius, y: -player.radius * 0.3 }
+    ];
+    
+    // Rotate and translate
+    const worldThrustPoints = thrustPoints.map(p => ({
+      x: player.x + (p.x * cos - p.y * sin),
+      y: player.y + (p.x * sin + p.y * cos)
+    }));
+    
     ctx.fillStyle = 'orange';
+    ctx.beginPath();
+    ctx.moveTo(worldThrustPoints[0].x, worldThrustPoints[0].y);
+    ctx.lineTo(worldThrustPoints[1].x, worldThrustPoints[1].y);
+    ctx.lineTo(worldThrustPoints[2].x, worldThrustPoints[2].y);
+    ctx.closePath();
     ctx.fill();
   }
 
   // Flicker effect if invulnerable
   if (player.damageInvulnFrames > 0) {
     if (Math.floor(player.damageInvulnFrames / 5) % 2 === 0) {
-      ctx.restore();
       return;
     }
   }
 
-  ctx.beginPath();
-  ctx.moveTo(player.radius, 0);
-  ctx.lineTo(-player.radius, player.radius / 2);
-  ctx.lineTo(-player.radius, -player.radius / 2);
-  ctx.closePath();
+  // Draw player triangle
   ctx.fillStyle = player.color;
+  ctx.beginPath();
+  ctx.moveTo(worldPoints[0].x, worldPoints[0].y);
+  ctx.lineTo(worldPoints[1].x, worldPoints[1].y);
+  ctx.lineTo(worldPoints[2].x, worldPoints[2].y);
+  ctx.closePath();
   ctx.fill();
-  ctx.restore();
 
+  // Draw shield ring if active
   if (player.shieldFrames > 0) {
     let ringShouldDraw = true;
     if (player.shieldFrames < 120) {
@@ -1505,63 +1529,63 @@ function drawPlayer() {
       }
     }
     if (ringShouldDraw) {
-      ctx.save();
       ctx.strokeStyle = 'rgba(0,255,255,0.5)';
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.restore();
     }
   }
 }
 
 function drawHeart(x, y, size) {
-  ctx.save();
-  ctx.translate(x, y);
   ctx.fillStyle = '#ff0000';
   ctx.beginPath();
-  ctx.moveTo(0, -size * 0.25);
+  ctx.moveTo(x, y - size * 0.25);
   ctx.bezierCurveTo(
-    -size * 0.5,
-    -size * 0.5,
-    -size * 0.5,
-    size * 0.2,
-    0,
-    size * 0.4
+    x - size * 0.5,
+    y - size * 0.5,
+    x - size * 0.5,
+    y + size * 0.2,
+    x,
+    y + size * 0.4
   );
   ctx.bezierCurveTo(
-    size * 0.5,
-    size * 0.2,
-    size * 0.5,
-    -size * 0.5,
-    0,
-    -size * 0.25
+    x + size * 0.5,
+    y + size * 0.2,
+    x + size * 0.5,
+    y - size * 0.5,
+    x,
+    y - size * 0.25
   );
   ctx.closePath();
   ctx.fill();
-  ctx.restore();
 }
 
 function drawPowerupShield(x, y, radius) {
-  ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.strokeStyle = '#00ffff';
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.restore();
 }
 
 function drawPowerupFasterFire(x, y, radius) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.setLineDash([4, 4]);
   ctx.strokeStyle = '#ffff00';
   ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
+  
+  const numDots = 12;
+  const dotAngle = Math.PI / 12;
+  const gapAngle = Math.PI / 12;
+  
+  for (let i = 0; i < numDots; i++) {
+    const startAngle = i * (dotAngle + gapAngle);
+    const endAngle = startAngle + dotAngle;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.stroke();
+  }
 }
 
 function drawStar(cx, cy, spikes, outerRadius, innerRadius, fillColor) {
@@ -1585,59 +1609,48 @@ function drawPowerupExplosion(x, y, radius) {
 }
 
 function drawPowerupSlowMotion(x, y, radius) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.strokeStyle = '#9966ff';
   ctx.lineWidth = 2;
-  ctx.stroke();
-
+  
   ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, -radius * 0.7);
-  ctx.moveTo(0, 0);
-  ctx.lineTo(radius * 0.7, 0);
-  ctx.strokeStyle = '#9966ff';
-  ctx.lineWidth = 2;
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.restore();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - radius * 0.7);
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + radius * 0.7, y);
+  ctx.stroke();
 }
 
 function drawPowerupTripleShot(x, y, radius) {
-  ctx.save();
-  ctx.translate(x, y);
   ctx.fillStyle = '#ff66ff';
   const dotRadius = radius * 0.25;
 
   ctx.beginPath();
-  ctx.arc(0, -radius / 2, dotRadius, 0, Math.PI * 2);
+  ctx.arc(x, y - radius / 2, dotRadius, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.beginPath();
-  ctx.arc(-radius / 2, radius / 2, dotRadius, 0, Math.PI * 2);
+  ctx.arc(x - radius / 2, y + radius / 2, dotRadius, 0, Math.PI * 2);
   ctx.fill();
 
+  // Bottom right dot
   ctx.beginPath();
-  ctx.arc(radius / 2, radius / 2, dotRadius, 0, Math.PI * 2);
+  ctx.arc(x + radius / 2, y + radius / 2, dotRadius, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.restore();
 }
 
 function drawScore() {
-  ctx.save();
   ctx.font = '20px Anta';
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   const highScore = localStorage.getItem('highScore') || 0;
   ctx.fillText(`Score: ${gameState.score}   High Score: ${highScore}`, 30, 20);
-  ctx.restore();
 }
 
 function drawLives() {
-  ctx.save();
   ctx.font = '20px Anta';
   ctx.fillStyle = '#ff0000';
   ctx.textAlign = 'left';
@@ -1647,7 +1660,6 @@ function drawLives() {
   for (let i = 0; i < gameState.lives; i++) {
     ctx.fillText('♥', baseX + i * 25, baseY);
   }
-  ctx.restore();
 }
 
 // ------------------------------------------------------
@@ -1686,8 +1698,6 @@ function shoot() {
 // MAIN GAME LOOP
 // ------------------------------------------------------
 let animationFrameId = null;
-let lastFrameTime = 0;
-const targetFrameTime = 1000 / 60; // 60 FPS cap
 
 function startGameLoop() {
   if (animationFrameId) {
@@ -1696,11 +1706,6 @@ function startGameLoop() {
   }
 
   const gameLoop = timestamp => {
-    if (timestamp - lastFrameTime < targetFrameTime) {
-      animationFrameId = requestAnimationFrame(gameLoop);
-      return;
-    }
-
     timeState.currentTime = timestamp;
     if (!timeState.lastTime) {
       timeState.lastTime = timestamp;
@@ -1712,7 +1717,6 @@ function startGameLoop() {
       GAME_CONFIG.TIME.MAX_DELTA
     ) / 1000;
 
-    lastFrameTime = timestamp;
     timeState.lastTime = timeState.currentTime;
     gamepadController.update();
 
