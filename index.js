@@ -1178,9 +1178,8 @@ function update(dt) {
   }
 
   // Update targets
-  const targetsToProcess = [...gameState.targets];
-  for (let i = targetsToProcess.length - 1; i >= 0; i--) {
-    const t = targetsToProcess[i];
+  for (let i = gameState.targets.length - 1; i >= 0; i--) {
+    const t = gameState.targets[i];
     if (!t) continue;
 
     t.x += t.speed * Math.cos(t.angleToCenter) * speedMultiplier * dt * 60;
@@ -1189,9 +1188,6 @@ function update(dt) {
 
     if (t.isAsteroid) {
       const radiusSq = t.healthBasedRadius * t.healthBasedRadius;
-      
-      // Early exit if no bullets
-      if (player.bullets.length === 0) continue;
       
       for (let j = player.bullets.length - 1; j >= 0; j--) {
         const bullet = player.bullets[j];
@@ -1868,6 +1864,18 @@ function resetGameState() {
   gameState.lastShotTime = 0;
   gameState.gameOverTimer = 0;
   gameState.asteroidCount = 0;
+
+  // Clear sidebar articles and stats
+  const articleList = document.querySelector('#sidePanel .articleList');
+  if (articleList) {
+    articleList.innerHTML = '';
+  }
+  Object.keys(GAME_CONFIG.WIKI.WIKI_COUNTS).forEach(wiki => {
+    GAME_CONFIG.WIKI.WIKI_COUNTS[wiki] = 0;
+  });
+  document.querySelectorAll('.wikiToggle .articleCount').forEach(countSpan => {
+    countSpan.textContent = '0';
+  });
 
   player.x = GAME_CONFIG.CANVAS.WIDTH / 2;
   player.y = GAME_CONFIG.CANVAS.HEIGHT / 2;
