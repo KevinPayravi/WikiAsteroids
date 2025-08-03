@@ -318,10 +318,13 @@ document.addEventListener(
 // ------------------------------------------------------
 // UTILITY FUNCTIONS
 // ------------------------------------------------------
+const IP_EDITOR_REGEX = /^((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]\d|25[0-5])\.){3}([0-9]|[1-9][0-9]|1\d\d|2[0-4]\d|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))$/;
+
 function isIPEditor(username) {
-  // Regex to test for both IPv4 and IPv6
-  const ipRegex = /^((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]\d|25[0-5])\.){3}([0-9]|[1-9][0-9]|1\d\d|2[0-4]\d|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))$/;
-  return ipRegex.test(username);
+  if (!username.includes('.') && !username.includes(':')) {
+    return false;
+  }
+  return IP_EDITOR_REGEX.test(username);
 }
 
 function truncateTitle(title, maxLen = 25) {
@@ -356,8 +359,10 @@ function wrapPosition(obj) {
 // OFFSCREEN TEXT LABEL CREATION
 // ------------------------------------------------------
 const labelCanvasCache = new Map();
+const labelCanvasRefCount = new Map(); // Track number of times each label is used, for repeat articles
 function createOffscreenLabelCanvas(text, font = '14px Anta', color = '#fff') {
   if (labelCanvasCache.has(text)) {
+    labelCanvasRefCount.set(text, (labelCanvasRefCount.get(text) || 0) + 1);
     return labelCanvasCache.get(text);
   }
 
@@ -381,7 +386,21 @@ function createOffscreenLabelCanvas(text, font = '14px Anta', color = '#fff') {
   offCtx.fillText(text, width / 2, height / 2);
 
   labelCanvasCache.set(text, offCanvas);
+  labelCanvasRefCount.set(text, 1);
   return offCanvas;
+}
+
+function cleanupLabelCanvas(target) {
+  if (target.labelCanvas && target.truncatedTitle) {
+    const refCount = labelCanvasRefCount.get(target.truncatedTitle) || 0;
+    if (refCount <= 1) {
+      labelCanvasCache.delete(target.truncatedTitle);
+      labelCanvasRefCount.delete(target.truncatedTitle);
+    } else {
+      labelCanvasRefCount.set(target.truncatedTitle, refCount - 1);
+    }
+    target.labelCanvas = null;
+  }
 }
 
 // ------------------------------------------------------
@@ -435,6 +454,7 @@ const SpawnManager = {
 
     const truncated = truncateTitle(title);
     target.labelCanvas = createOffscreenLabelCanvas(truncated);
+    target.truncatedTitle = truncated;
 
     const centerX = W / 2;
     const centerY = H / 2;
@@ -456,6 +476,7 @@ const SpawnManager = {
 
     const truncated = truncateTitle(title);
     target.labelCanvas = createOffscreenLabelCanvas(truncated);
+    target.truncatedTitle = truncated;
 
     switch (type) {
       case POWERUP_TYPES.HEART:
@@ -488,6 +509,10 @@ const SpawnManager = {
 // ARTICLE SNIPPET MANAGER
 // ------------------------------------------------------
 const SnippetManager = {
+  pendingFetches: new Map(),
+  lastFetchTime: 0,
+  FETCH_DEBOUNCE_MS: 100,
+  
   async fetchAndDisplay(wiki, target) {
     if (!target?.title) {
       console.warn('No title provided for snippet');
@@ -515,11 +540,30 @@ const SnippetManager = {
         return;
       }
 
+      const now = performance.now();
+      const cacheKey = `${wiki}:${target.title}`;
+      
+      if (this.pendingFetches.has(cacheKey)) {
+        return;
+      }
+      
+      if (now - this.lastFetchTime < this.FETCH_DEBOUNCE_MS) {
+        setTimeout(() => {
+          this.fetchAndDisplay(wiki, target);
+        }, this.FETCH_DEBOUNCE_MS);
+        return;
+      }
+      
+      this.pendingFetches.set(cacheKey, true);
+      this.lastFetchTime = now;
+
       const wikiCode = wiki.replace('wiki', '');
       const domain = `${wikiCode}.wikipedia.org`;
       const encodedTitle = encodeURIComponent(target.title);
       const url = `https://${domain}/api/rest_v1/page/summary/${encodedTitle}`;
       const response = await fetch(url);
+
+      this.pendingFetches.delete(cacheKey);
 
       if (!response.ok) {
         console.warn('Snippet fetch failed:', response.status, url);
@@ -1186,30 +1230,42 @@ function update(dt) {
     if (t.isAsteroid) {
       const radiusSq = t.healthBasedRadius * t.healthBasedRadius;
       
-      for (let j = player.bullets.length - 1; j >= 0; j--) {
-        const bullet = player.bullets[j];
-        const distSq = distanceSquared(t.x, t.y, bullet.x, bullet.y);
-        if (distSq < radiusSq) {
-          t.health--;
-          t.healthBasedRadius = 10 + t.health * 5;
-          gameState.score++;
-          const removedBullet = player.bullets.splice(j, 1)[0];
-          objectPools.returnBullet(removedBullet);
-
-          if (t.health <= 0) {
-            SoundManager.play('pop');
-            spawnExplosion(t.x, t.y);
-            const removed = gameState.targets.splice(i, 1)[0];
-            if (removed.labelCanvas) removed.labelCanvas = null;
-            setTimeout(() => {
-              SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
-            }, 0);
-            gameState.asteroidCount--;
-            break;
-          } else {
-            SoundManager.play('pop');
-          }
+      // Early exit if asteroid is far from all bullets
+      let nearAnyBullet = false;
+      const asteroidBounds = t.healthBasedRadius + 50;
+      
+      for (const bullet of player.bullets) {
+        const roughDistSq = (t.x - bullet.x) * (t.x - bullet.x) + (t.y - bullet.y) * (t.y - bullet.y);
+        if (roughDistSq < asteroidBounds * asteroidBounds) {
+          nearAnyBullet = true;
           break;
+        }
+      }
+      
+      if (nearAnyBullet) {
+        for (let j = player.bullets.length - 1; j >= 0; j--) {
+          const bullet = player.bullets[j];
+          const distSq = distanceSquared(t.x, t.y, bullet.x, bullet.y);
+          if (distSq < radiusSq) {
+            t.health--;
+            t.healthBasedRadius = 10 + t.health * 5;
+            gameState.score++;
+            const removedBullet = player.bullets.splice(j, 1)[0];
+            objectPools.returnBullet(removedBullet);
+
+            SoundManager.play('pop');
+            if (t.health <= 0) {
+              spawnExplosion(t.x, t.y);
+              const removed = gameState.targets.splice(i, 1)[0];
+              cleanupLabelCanvas(removed);
+              setTimeout(() => {
+                SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+              }, 0);
+              gameState.asteroidCount--;
+              break;
+            }
+            break;
+          }
         }
       }
     }
@@ -1224,7 +1280,7 @@ function update(dt) {
       if (t.isHeart) {
         SoundManager.play('acquireHeart');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1232,7 +1288,7 @@ function update(dt) {
       } else if (t.isShield) {
         SoundManager.play('acquireInvincibility');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1240,7 +1296,7 @@ function update(dt) {
       } else if (t.isFasterFire) {
         SoundManager.play('acquireFasterFire');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1248,7 +1304,7 @@ function update(dt) {
       } else if (t.isExplosion) {
         SoundManager.play('acquireExplosion');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1261,7 +1317,7 @@ function update(dt) {
           const asteroidIndex = gameState.targets.indexOf(asteroid);
           if (asteroidIndex !== -1) {
             const removedAsteroid = gameState.targets.splice(asteroidIndex, 1)[0];
-            if (removedAsteroid.labelCanvas) removedAsteroid.labelCanvas = null;
+            cleanupLabelCanvas(removedAsteroid);
             SnippetManager.fetchAndDisplay(
               removedAsteroid.metadata?.wiki || 'enwiki',
               removedAsteroid
@@ -1273,7 +1329,7 @@ function update(dt) {
       } else if (t.isSlowMotion) {
         SoundManager.play('acquireSlowMotion');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1290,7 +1346,7 @@ function update(dt) {
       } else if (t.isTripleShot) {
         SoundManager.play('acquireTripleShot');
         const removed = gameState.targets.splice(i, 1)[0];
-        if (removed.labelCanvas) removed.labelCanvas = null;
+        cleanupLabelCanvas(removed);
         setTimeout(() => {
           SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
         }, 0);
@@ -1302,7 +1358,7 @@ function update(dt) {
         if (t.health <= 0) {
           spawnExplosion(t.x, t.y);
           const removed = gameState.targets.splice(i, 1)[0];
-          if (removed.labelCanvas) removed.labelCanvas = null;
+          cleanupLabelCanvas(removed);
           setTimeout(() => {
             SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
           }, 0);
@@ -1876,6 +1932,11 @@ function resetGameState() {
     countSpan.textContent = '0';
   });
 
+  // Clear label cache
+  labelCanvasCache.clear();
+  labelCanvasRefCount.clear();
+
+  // Reset player state
   player.x = GAME_CONFIG.CANVAS.WIDTH / 2;
   player.y = GAME_CONFIG.CANVAS.HEIGHT / 2;
   player.angle = 0;
