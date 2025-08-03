@@ -96,6 +96,31 @@ const WikiEventHandler = {
 };
 
 // ------------------------------------------------------
+// OBJECT POOLS
+// ------------------------------------------------------
+const objectPools = {
+  bullets: [],
+  sparks: [],
+  getBullet() {
+    return this.bullets.pop() || {
+      x: 0, y: 0, vx: 0, vy: 0, traveledDistance: 0
+    };
+  },
+  returnBullet(bullet) {
+    bullet.traveledDistance = 0;
+    this.bullets.push(bullet);
+  },
+  getSpark() {
+    return this.sparks.pop() || {
+      x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#ffa500'
+    };
+  },
+  returnSpark(spark) {
+    this.sparks.push(spark);
+  }
+};
+
+// ------------------------------------------------------
 // GAME STATE
 // ------------------------------------------------------
 const gameState = {
@@ -330,7 +355,6 @@ function wrapPosition(obj) {
 
 // ------------------------------------------------------
 // OFFSCREEN TEXT LABEL CREATION
-// Should reduce memory usage by caching the canvas
 // ------------------------------------------------------
 const labelCanvasCache = new Map();
 function createOffscreenLabelCanvas(text, font = '14px Anta', color = '#fff') {
@@ -871,19 +895,21 @@ if (
 // EXPLOSIONS
 // ------------------------------------------------------
 function spawnExplosion(x, y) {
-  const numParticles = 15;
+  const numParticles = 10;
   const sparks = [];
   for (let i = 0; i < numParticles; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 2 + Math.random() * 2;
-    sparks.push({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 30 + Math.floor(Math.random() * 20),
-      color: '#ffa500'
-    });
+    const spark = objectPools.getSpark();
+    
+    spark.x = x;
+    spark.y = y;
+    spark.vx = Math.cos(angle) * speed;
+    spark.vy = Math.sin(angle) * speed;
+    spark.life = 30 + Math.floor(Math.random() * 20);
+    spark.color = '#ffa500';
+    
+    sparks.push(spark);
   }
   gameState.explosions.push({ sparks });
 }
@@ -891,26 +917,36 @@ function spawnExplosion(x, y) {
 function updateExplosions() {
   for (let i = gameState.explosions.length - 1; i >= 0; i--) {
     const e = gameState.explosions[i];
+    let activeSparks = 0;
+    
     for (let j = e.sparks.length - 1; j >= 0; j--) {
       const s = e.sparks[j];
       s.x += s.vx;
       s.y += s.vy;
       s.life--;
+      
       if (s.life <= 0) {
-        e.sparks.splice(j, 1);
+        const removedSpark = e.sparks.splice(j, 1)[0];
+        objectPools.returnSpark(removedSpark);
+      } else {
+        activeSparks++;
       }
     }
-    if (e.sparks.length === 0) {
+    
+    // Remove explosion if no active sparks
+    if (activeSparks === 0) {
       gameState.explosions.splice(i, 1);
     }
   }
 }
 
 function drawExplosions() {
+  if (gameState.explosions.length === 0) return;
+  
   ctx.save();
+  ctx.fillStyle = '#ffa500';
   for (const explosion of gameState.explosions) {
     for (const spark of explosion.sparks) {
-      ctx.fillStyle = spark.color;
       ctx.fillRect(spark.x, spark.y, 3, 3);
     }
   }
@@ -926,15 +962,17 @@ function spawnFinalExplosion(x, y) {
   for (let i = 0; i < numSparks; i++) {
     const angle = (Math.PI * 2 * i) / numSparks;
     const velocity = speed * (0.5 + Math.random());
-    sparks.push({
-      x,
-      y,
-      vx: Math.cos(angle) * velocity,
-      vy: Math.sin(angle) * velocity,
-      life: lifetime,
-      maxLife: lifetime,
-      size: 4 + Math.random() * 4
-    });
+    const spark = objectPools.getSpark();
+    
+    spark.x = x;
+    spark.y = y;
+    spark.vx = Math.cos(angle) * velocity;
+    spark.vy = Math.sin(angle) * velocity;
+    spark.life = lifetime;
+    spark.maxLife = lifetime;
+    spark.size = 4 + Math.random() * 4;
+    
+    sparks.push(spark);
   }
   SoundManager.play('finalExplosion');
   gameState.explosions.push({ sparks });
@@ -1134,7 +1172,8 @@ function update(dt) {
     bullet.traveledDistance += distFrame;
 
     if (bullet.traveledDistance > GAME_CONFIG.GAMEPLAY.BULLET_MAX_DISTANCE) {
-      player.bullets.splice(i, 1);
+      const removedBullet = player.bullets.splice(i, 1)[0];
+      objectPools.returnBullet(removedBullet);
     }
   }
 
@@ -1150,6 +1189,10 @@ function update(dt) {
 
     if (t.isAsteroid) {
       const radiusSq = t.healthBasedRadius * t.healthBasedRadius;
+      
+      // Early exit if no bullets
+      if (player.bullets.length === 0) continue;
+      
       for (let j = player.bullets.length - 1; j >= 0; j--) {
         const bullet = player.bullets[j];
         const distSq = distanceSquared(t.x, t.y, bullet.x, bullet.y);
@@ -1157,7 +1200,8 @@ function update(dt) {
           t.health--;
           t.healthBasedRadius = 10 + t.health * 5;
           gameState.score++;
-          player.bullets.splice(j, 1);
+          const removedBullet = player.bullets.splice(j, 1)[0];
+          objectPools.returnBullet(removedBullet);
 
           if (t.health <= 0) {
             SoundManager.play('pop');
@@ -1168,6 +1212,7 @@ function update(dt) {
               SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
             }, 0);
             gameState.asteroidCount--;
+            break;
           } else {
             SoundManager.play('pop');
           }
@@ -1320,11 +1365,14 @@ function draw() {
     drawPlayer();
   }
 
-  const bulletColor = player.fasterFireFrames > 0 ? '#ffff00' : '#fff';
-  ctx.fillStyle = bulletColor;
-  for (const bullet of player.bullets) {
+  if (player.bullets.length > 0) {
+    const bulletColor = player.fasterFireFrames > 0 ? '#ffff00' : '#fff';
+    ctx.fillStyle = bulletColor;
     ctx.beginPath();
-    ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+    for (const bullet of player.bullets) {
+      ctx.moveTo(bullet.x + 3, bullet.y);
+      ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+    }
     ctx.fill();
   }
 
@@ -1625,13 +1673,15 @@ function shoot() {
   const bulletSpeed = player.bulletSpeed;
   const baseAngle = player.angle;
 
-  const createBullet = angle => ({
-    x: player.x + Math.cos(angle) * player.radius,
-    y: player.y + Math.sin(angle) * player.radius,
-    vx: bulletSpeed * Math.cos(angle),
-    vy: bulletSpeed * Math.sin(angle),
-    traveledDistance: 0
-  });
+  const createBullet = angle => {
+    const bullet = objectPools.getBullet();
+    bullet.x = player.x + Math.cos(angle) * player.radius;
+    bullet.y = player.y + Math.sin(angle) * player.radius;
+    bullet.vx = bulletSpeed * Math.cos(angle);
+    bullet.vy = bulletSpeed * Math.sin(angle);
+    bullet.traveledDistance = 0;
+    return bullet;
+  };
 
   player.bullets.push(createBullet(baseAngle));
   if (player.tripleShotFrames > 0) {
@@ -1645,6 +1695,9 @@ function shoot() {
 // MAIN GAME LOOP
 // ------------------------------------------------------
 let animationFrameId = null;
+let lastFrameTime = 0;
+const targetFrameTime = 1000 / 60; // 60 FPS cap
+
 function startGameLoop() {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
@@ -1652,6 +1705,11 @@ function startGameLoop() {
   }
 
   const gameLoop = timestamp => {
+    if (timestamp - lastFrameTime < targetFrameTime) {
+      animationFrameId = requestAnimationFrame(gameLoop);
+      return;
+    }
+
     timeState.currentTime = timestamp;
     if (!timeState.lastTime) {
       timeState.lastTime = timestamp;
@@ -1663,6 +1721,7 @@ function startGameLoop() {
       GAME_CONFIG.TIME.MAX_DELTA
     ) / 1000;
 
+    lastFrameTime = timestamp;
     timeState.lastTime = timeState.currentTime;
     gamepadController.update();
 
