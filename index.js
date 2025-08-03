@@ -943,14 +943,12 @@ function updateExplosions() {
 function drawExplosions() {
   if (gameState.explosions.length === 0) return;
   
-  ctx.save();
   ctx.fillStyle = '#ffa500';
   for (const explosion of gameState.explosions) {
     for (const spark of explosion.sparks) {
-      ctx.fillRect(spark.x, spark.y, 3, 3);
+      ctx.fillRect(spark.x - 1, spark.y - 1, 3, 3);
     }
   }
-  ctx.restore();
 }
 
 function spawnFinalExplosion(x, y) {
@@ -1364,12 +1362,9 @@ function draw() {
   if (player.bullets.length > 0) {
     const bulletColor = player.fasterFireFrames > 0 ? '#ffff00' : '#fff';
     ctx.fillStyle = bulletColor;
-    ctx.beginPath();
     for (const bullet of player.bullets) {
-      ctx.moveTo(bullet.x + 3, bullet.y);
-      ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+      ctx.fillRect(bullet.x - 1, bullet.y - 1, 3, 3);
     }
-    ctx.fill();
   }
 
   for (const t of gameState.targets) {
