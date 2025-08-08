@@ -134,7 +134,6 @@ const gameState = {
   explosions: [],
   lastShotTime: 0,
   gameOverTimer: 0,
-  asteroidCount: 0,
   fatalArticle: null,
   lastPowerupEndSound: 0
 };
@@ -345,6 +344,10 @@ function distanceSquared(x1, y1, x2, y2) {
   return dx * dx + dy * dy;
 }
 
+function getCurrentAsteroidCount() {
+  return gameState.targets.filter(t => t.isAsteroid).length;
+}
+
 function prependSnippet(snippetDiv) {
   const articleList = document.querySelector('#sidePanel .articleList');
   articleList.insertBefore(snippetDiv, articleList.firstChild);
@@ -440,8 +443,15 @@ const SpawnManager = {
   },
 
   spawnAsteroid(title, health, metadata) {
-    if (gameState.paused || !gameState.gameStarted || gameState.gameOver) return;
-    if (gameState.asteroidCount >= GAME_CONFIG.GAMEPLAY.MAX_ASTEROIDS) return;
+    
+    if (gameState.paused || !gameState.gameStarted || gameState.gameOver) {
+      return;
+    }
+    
+    const currentAsteroidCount = getCurrentAsteroidCount();
+    if (currentAsteroidCount >= GAME_CONFIG.GAMEPLAY.MAX_ASTEROIDS) {
+      return;
+    }
 
     const target = this.spawnOffscreenTarget(title);
     target.isAsteroid = true;
@@ -464,7 +474,6 @@ const SpawnManager = {
     target.speed = 0.8 + Math.random() * 1.2;
 
     gameState.targets.push(target);
-    gameState.asteroidCount++;
   },
 
   spawnPowerup(type, title, metadata) {
@@ -1261,7 +1270,6 @@ function update(dt) {
               setTimeout(() => {
                 SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
               }, 0);
-              gameState.asteroidCount--;
               break;
             }
             break;
@@ -1310,21 +1318,20 @@ function update(dt) {
         }, 0);
 
         let pointsGained = 0;
-        const asteroidsToDestroy = gameState.targets.filter(obj => obj.isAsteroid);
-        asteroidsToDestroy.forEach(asteroid => {
-          pointsGained += asteroid.health || 0;
-          spawnExplosion(asteroid.x, asteroid.y);
-          const asteroidIndex = gameState.targets.indexOf(asteroid);
-          if (asteroidIndex !== -1) {
-            const removedAsteroid = gameState.targets.splice(asteroidIndex, 1)[0];
+        
+        for (let k = gameState.targets.length - 1; k >= 0; k--) {
+          const target = gameState.targets[k];
+          if (target.isAsteroid) {
+            pointsGained += target.health || 0;
+            spawnExplosion(target.x, target.y);
+            const removedAsteroid = gameState.targets.splice(k, 1)[0];
             cleanupLabelCanvas(removedAsteroid);
             SnippetManager.fetchAndDisplay(
               removedAsteroid.metadata?.wiki || 'enwiki',
               removedAsteroid
             );
-            gameState.asteroidCount--;
           }
-        });
+        }
         gameState.score += pointsGained;
       } else if (t.isSlowMotion) {
         SoundManager.play('acquireSlowMotion');
@@ -1362,7 +1369,6 @@ function update(dt) {
           setTimeout(() => {
             SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
           }, 0);
-          gameState.asteroidCount--;
         }
         gameState.lives--;
         if (gameState.lives <= 0) {
@@ -1918,7 +1924,6 @@ function resetGameState() {
   gameState.explosions = [];
   gameState.lastShotTime = 0;
   gameState.gameOverTimer = 0;
-  gameState.asteroidCount = 0;
 
   // Clear sidebar articles and stats
   const articleList = document.querySelector('#sidePanel .articleList');
