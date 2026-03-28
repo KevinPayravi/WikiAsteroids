@@ -1035,6 +1035,7 @@ const gamepadController = {
   deadzone: 0.1,
   startLock: false,
   shootStartLock: false,
+  thrustStartLock: false,
 
   update() {
     const gamepads = navigator.getGamepads?.() || [];
@@ -1067,12 +1068,19 @@ const gamepadController = {
     }
 
     const shootPressed = gamepad.buttons[2]?.pressed || gamepad.buttons[1]?.pressed || gamepad.buttons[7]?.pressed;
+    const thrustPressed = gamepad.buttons[0]?.pressed || gamepad.buttons[12]?.pressed || (gamepad.axes[1] ?? 0) < -this.deadzone;
     if (!gameState.gameStarted && !gameState.gameOver) {
       if (shootPressed && !this.shootStartLock) {
         startGame();
         this.shootStartLock = true;
       } else if (!shootPressed) {
         this.shootStartLock = false;
+      }
+      if (thrustPressed && !this.thrustStartLock) {
+        startGame();
+        this.thrustStartLock = true;
+      } else if (!thrustPressed) {
+        this.thrustStartLock = false;
       }
       return;
     }
