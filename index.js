@@ -1034,6 +1034,7 @@ function spawnFinalExplosion(x, y) {
 const gamepadController = {
   deadzone: 0.1,
   startLock: false,
+  shootStartLock: false,
 
   update() {
     const gamepads = navigator.getGamepads?.() || [];
@@ -1065,7 +1066,18 @@ const gamepadController = {
       this.startLock = false;
     }
 
-    if (!gameState.gameStarted || gameState.gameOver) return;
+    const shootPressed = gamepad.buttons[2]?.pressed || gamepad.buttons[1]?.pressed || gamepad.buttons[7]?.pressed;
+    if (!gameState.gameStarted && !gameState.gameOver) {
+      if (shootPressed && !this.shootStartLock) {
+        startGame();
+        this.shootStartLock = true;
+      } else if (!shootPressed) {
+        this.shootStartLock = false;
+      }
+      return;
+    }
+
+    if (gameState.gameOver) return;
     if (gameState.paused) return;
 
     const leftX = gamepad.axes[0];
@@ -1097,11 +1109,7 @@ const gamepadController = {
     }
     updateMobileButtonState('ArrowUp', gameState.keysGamepad.ArrowUp);
 
-    const buttonX = gamepad.buttons[2]?.pressed;
-    const buttonB = gamepad.buttons[1]?.pressed;
-    const rightTrigger = gamepad.buttons[7]?.pressed;
-
-    if (buttonX || buttonB || rightTrigger) {
+    if (shootPressed) {
       gameState.keysGamepad.Space = true;
     } else {
       gameState.keysGamepad.Space = false;
