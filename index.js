@@ -135,7 +135,8 @@ const gameState = {
   lastShotTime: 0,
   gameOverTimer: 0,
   fatalArticle: null,
-  lastPowerupEndSound: 0
+  lastPowerupEndSound: 0,
+  highScore: parseInt(localStorage.getItem('highScore')) || 0
 };
 
 // ------------------------------------------------------
@@ -733,6 +734,7 @@ document.addEventListener('visibilitychange', () => {
     if (!eventSource) {
       initializeEventSource();
     }
+    needsRedraw = true;
   }
 });
 
@@ -835,6 +837,7 @@ const keyboardController = {
       case 'KeyP':
         if (gameState.gameStarted && !gameState.gameOver) {
           gameState.paused = !gameState.paused;
+          needsRedraw = true;
           updatePauseButton();
           SoundManager.play('gameToggle');
         }
@@ -849,6 +852,7 @@ const keyboardController = {
       }
       case 'KeyF':
         toggleFullscreen();
+        needsRedraw = true;
         return;
       case 'Enter':
         if (gameState.gameOver) {
@@ -1058,6 +1062,7 @@ const gamepadController = {
           startGame();
         } else {
           gameState.paused = !gameState.paused;
+          needsRedraw = true;
           updatePauseButton();
           SoundManager.play('gameToggle');
         }
@@ -1135,9 +1140,10 @@ function update(dt) {
     if (gameState.gameOverTimer <= 0) {
       gameState.gameOverTimer = 0;
       gameState.gameOver = true;
+      needsRedraw = true;
       SoundManager.stopThrust();
-      const storedHighScore = localStorage.getItem('highScore') || 0;
-      if (gameState.score > storedHighScore) {
+      if (gameState.score > gameState.highScore) {
+        gameState.highScore = gameState.score;
         localStorage.setItem('highScore', gameState.score);
       }
     }
@@ -1437,31 +1443,28 @@ function draw() {
   if (player.bullets.length > 0) {
     const bulletColor = player.fasterFireFrames > 0 ? '#ffff00' : '#fff';
     ctx.fillStyle = bulletColor;
+    ctx.beginPath();
     for (const bullet of player.bullets) {
-      ctx.fillRect(bullet.x - 1, bullet.y - 1, 3, 3);
+      ctx.rect(bullet.x - 1, bullet.y - 1, 3, 3);
     }
+    ctx.fill();
   }
 
   for (const t of gameState.targets) {
     if (t.isHeart) {
       drawHeart(t.x, t.y, 20);
     } else if (t.isAsteroid) {
-      ctx.save();
-      ctx.translate(t.x, t.y);
-      const currentRadius = t.healthBasedRadius;
-      const scale = currentRadius / t.baseRadius;
+      const scale = t.healthBasedRadius / t.baseRadius;
       ctx.beginPath();
       for (let i = 0; i < t.shape.length; i++) {
-        const vx = t.shape[i].x * scale;
-        const vy = t.shape[i].y * scale;
+        const vx = t.x + t.shape[i].x * scale;
+        const vy = t.y + t.shape[i].y * scale;
         if (i === 0) ctx.moveTo(vx, vy);
         else ctx.lineTo(vx, vy);
       }
       ctx.closePath();
-      const color = t.diffSign && t.diffSign < 0 ? '#a08080' : '#80a0c0';
-      ctx.fillStyle = color;
+      ctx.fillStyle = t.diffSign && t.diffSign < 0 ? '#a08080' : '#80a0c0';
       ctx.fill();
-      ctx.restore();
     } else if (t.isShield) {
       drawPowerupShield(t.x, t.y, 15);
     } else if (t.isFasterFire) {
@@ -1514,9 +1517,8 @@ function drawGameOver() {
   ctx.textBaseline = 'middle';
   ctx.fillText('GAME OVER', W / 2, H / 2 - 20);
 
-  const highScore = localStorage.getItem('highScore') || 0;
   ctx.font = '24px Anta';
-  ctx.fillText(`Score: ${gameState.score}   High Score: ${highScore}`, W / 2, H / 2 + 30);
+  ctx.fillText(`Score: ${gameState.score}   High Score: ${gameState.highScore}`, W / 2, H / 2 + 30);
 
   drawRestartButton();
 
@@ -1649,19 +1651,15 @@ function drawPowerupShield(x, y, radius) {
 function drawPowerupFasterFire(x, y, radius) {
   ctx.strokeStyle = '#ffff00';
   ctx.lineWidth = 3;
-  
-  const numDots = 12;
+  ctx.beginPath();
+  const step = Math.PI / 6;
   const dotAngle = Math.PI / 12;
-  const gapAngle = Math.PI / 12;
-  
-  for (let i = 0; i < numDots; i++) {
-    const startAngle = i * (dotAngle + gapAngle);
-    const endAngle = startAngle + dotAngle;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, radius, startAngle, endAngle);
-    ctx.stroke();
+  for (let i = 0; i < 12; i++) {
+    const startAngle = i * step;
+    ctx.moveTo(x + Math.cos(startAngle) * radius, y + Math.sin(startAngle) * radius);
+    ctx.arc(x, y, radius, startAngle, startAngle + dotAngle);
   }
+  ctx.stroke();
 }
 
 function drawStar(cx, cy, spikes, outerRadius, innerRadius, fillColor) {
@@ -1722,8 +1720,7 @@ function drawScore() {
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  const highScore = localStorage.getItem('highScore') || 0;
-  ctx.fillText(`Score: ${gameState.score}   High Score: ${highScore}`, 30, 20);
+  ctx.fillText(`Score: ${gameState.score}   High Score: ${gameState.highScore}`, 30, 20);
 }
 
 function drawLives() {
@@ -1775,6 +1772,7 @@ function shoot() {
 // ------------------------------------------------------
 let animationFrameId = null;
 
+let needsRedraw = true;
 function startGameLoop() {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
@@ -1782,26 +1780,27 @@ function startGameLoop() {
   }
 
   const gameLoop = timestamp => {
+    animationFrameId = requestAnimationFrame(gameLoop);
+
     timeState.currentTime = timestamp;
     if (!timeState.lastTime) {
       timeState.lastTime = timestamp;
     }
 
-    // Calculate delta time in seconds
-    timeState.deltaTime = Math.min(
-      timeState.currentTime - timeState.lastTime,
-      GAME_CONFIG.TIME.MAX_DELTA
-    ) / 1000;
+    const elapsed = timeState.currentTime - timeState.lastTime;
+    timeState.lastTime = timestamp;
+    timeState.deltaTime = Math.min(elapsed, GAME_CONFIG.TIME.MAX_DELTA) / 1000;
 
-    timeState.lastTime = timeState.currentTime;
     gamepadController.update();
 
-    if (!gameState.gameOver && gameState.gameStarted) {
+    const isPlaying = gameState.gameStarted && !gameState.gameOver && !gameState.paused;
+    if (isPlaying) {
       update(timeState.deltaTime);
+      draw();
+    } else if (needsRedraw) {
+      draw();
+      needsRedraw = false;
     }
-
-    draw();
-    animationFrameId = requestAnimationFrame(gameLoop);
   };
 
   animationFrameId = requestAnimationFrame(gameLoop);
@@ -1810,6 +1809,7 @@ function startGameLoop() {
 function restartGame() {
   SoundManager.play('gameToggle');
   resetGameState();
+  needsRedraw = true;
   canvas.focus();
 }
 
@@ -1901,6 +1901,7 @@ function toggleFullscreen() {
 
 fullscreenButton.addEventListener('click', () => {
   toggleFullscreen();
+  needsRedraw = true;
 });
 
 // ------------------------------------------------------
@@ -1909,6 +1910,7 @@ fullscreenButton.addEventListener('click', () => {
 if (mobileControls.pause) {
   mobileControls.pause.addEventListener('click', () => {
     gameState.paused = !gameState.paused;
+    needsRedraw = true;
     updatePauseButton();
     SoundManager.play('gameToggle');
   });
