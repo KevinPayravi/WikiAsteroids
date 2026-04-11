@@ -5,7 +5,10 @@
 // ------------------------------------------------------
 const EVENT_STREAM_CONFIG = {
   RECONNECT_INTERVAL: 14 * 60 * 1000, // Reconnect every 14 minutes (before 15-minute timeout)
-  reconnectTimer: null
+  WATCHDOG_MS: 5 * 1000, // Check every 5s; reconnect if silent for 5s
+  reconnectTimer: null,
+  watchdogTimer: null,
+  lastEventTime: 0
 };
 
 const POWERUP_TYPES = {
@@ -692,25 +695,69 @@ class SidebarManager {
 // Recent changes from Wikimedia event stream
 // ------------------------------------------------------
 let eventSource = null;
+let reconnectAttempts = 0;
 
 function initializeEventSource() {
   if (eventSource) {
     eventSource.close();
+    eventSource = null;
   }
-  
+
   // Clear any existing reconnect timer
   if (EVENT_STREAM_CONFIG.reconnectTimer) {
     clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
+    EVENT_STREAM_CONFIG.reconnectTimer = null;
   }
+
+  EVENT_STREAM_CONFIG.lastEventTime = Date.now();
 
   eventSource = new EventSource('https://stream.wikimedia.org/v2/stream/recentchange');
   eventSource.onmessage = handleWikiEvent;
   eventSource.onerror = handleEventSourceError;
 
-  // Set up reconnection timer
+  // Proactive reconnect before the server's 15-minute timeout
   EVENT_STREAM_CONFIG.reconnectTimer = setTimeout(() => {
     initializeEventSource();
   }, EVENT_STREAM_CONFIG.RECONNECT_INTERVAL);
+
+  startStreamWatchdog();
+}
+
+function startStreamWatchdog() {
+  if (EVENT_STREAM_CONFIG.watchdogTimer) {
+    clearInterval(EVENT_STREAM_CONFIG.watchdogTimer);
+  }
+  EVENT_STREAM_CONFIG.watchdogTimer = setInterval(() => {
+    if (document.hidden) return;
+    const stale = Date.now() - EVENT_STREAM_CONFIG.lastEventTime;
+    const staleThreshold = EVENT_STREAM_CONFIG.WATCHDOG_MS;
+    if (stale > staleThreshold) {
+      reconnectAttempts = 0;
+      initializeEventSource();
+    }
+  }, EVENT_STREAM_CONFIG.WATCHDOG_MS);
+}
+
+function pauseStream() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  if (EVENT_STREAM_CONFIG.reconnectTimer) {
+    clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
+    EVENT_STREAM_CONFIG.reconnectTimer = null;
+  }
+  if (EVENT_STREAM_CONFIG.watchdogTimer) {
+    clearInterval(EVENT_STREAM_CONFIG.watchdogTimer);
+    EVENT_STREAM_CONFIG.watchdogTimer = null;
+  }
+}
+
+function resumeStream() {
+  if (!eventSource) {
+    reconnectAttempts = 0;
+    initializeEventSource();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -730,11 +777,22 @@ document.addEventListener('visibilitychange', () => {
       clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
       EVENT_STREAM_CONFIG.reconnectTimer = null;
     }
-  } else {
-    if (!eventSource) {
-      initializeEventSource();
+    if (EVENT_STREAM_CONFIG.watchdogTimer) {
+      clearInterval(EVENT_STREAM_CONFIG.watchdogTimer);
+      EVENT_STREAM_CONFIG.watchdogTimer = null;
     }
+  } else {
+    reconnectAttempts = 0;
+    initializeEventSource();
     needsRedraw = true;
+  }
+});
+
+// Reconnect immediately when network comes back online
+window.addEventListener('online', () => {
+  if (!document.hidden) {
+    reconnectAttempts = 0;
+    initializeEventSource();
   }
 });
 
@@ -748,6 +806,9 @@ const WIKI_TO_LANG = {
 
 function handleWikiEvent(event) {
   if (document.hidden) return;
+  // Mark stream as healthy on any received event
+  EVENT_STREAM_CONFIG.lastEventTime = Date.now();
+  reconnectAttempts = 0;
   try {
     const data = JSON.parse(event.data);
     if (data.bot) return;
@@ -795,7 +856,18 @@ function handleWikiEvent(event) {
 }
 
 function handleEventSourceError(err) {
-  console.log('EventSource error:', err);
+  if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+    if (EVENT_STREAM_CONFIG.reconnectTimer) {
+      clearTimeout(EVENT_STREAM_CONFIG.reconnectTimer);
+      EVENT_STREAM_CONFIG.reconnectTimer = null;
+    }
+    if (!document.hidden) {
+      // Exponential backoff: 2s, 4s, 8s, capped at 30s
+      const delay = Math.min(2000 * Math.pow(2, reconnectAttempts), 30000);
+      reconnectAttempts++;
+      EVENT_STREAM_CONFIG.reconnectTimer = setTimeout(initializeEventSource, delay);
+    }
+  }
 }
 
 // ------------------------------------------------------
@@ -837,6 +909,7 @@ const keyboardController = {
       case 'KeyP':
         if (gameState.gameStarted && !gameState.gameOver) {
           gameState.paused = !gameState.paused;
+          if (gameState.paused) { pauseStream(); } else { resumeStream(); }
           needsRedraw = true;
           updatePauseButton();
           SoundManager.play('gameToggle');
@@ -1062,6 +1135,7 @@ const gamepadController = {
           startGame();
         } else {
           gameState.paused = !gameState.paused;
+          if (gameState.paused) { pauseStream(); } else { resumeStream(); }
           needsRedraw = true;
           updatePauseButton();
           SoundManager.play('gameToggle');
@@ -1140,6 +1214,7 @@ function update(dt) {
     if (gameState.gameOverTimer <= 0) {
       gameState.gameOverTimer = 0;
       gameState.gameOver = true;
+      pauseStream();
       needsRedraw = true;
       SoundManager.stopThrust();
       if (gameState.score > gameState.highScore) {
@@ -1809,11 +1884,14 @@ function startGameLoop() {
 function restartGame() {
   SoundManager.play('gameToggle');
   resetGameState();
+  resumeStream();
   needsRedraw = true;
   canvas.focus();
 }
 
-startGameLoop();
+document.fonts.ready.then(() => {
+  startGameLoop();
+});
 
 // ------------------------------------------------------
 // SIDEBAR INIT
@@ -1910,6 +1988,7 @@ fullscreenButton.addEventListener('click', () => {
 if (mobileControls.pause) {
   mobileControls.pause.addEventListener('click', () => {
     gameState.paused = !gameState.paused;
+    if (gameState.paused) { pauseStream(); } else { resumeStream(); }
     needsRedraw = true;
     updatePauseButton();
     SoundManager.play('gameToggle');
