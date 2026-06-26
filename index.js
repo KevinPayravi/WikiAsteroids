@@ -362,6 +362,180 @@ function wrapPosition(obj) {
   obj.y = (obj.y + H) % H;
 }
 
+// Player hitbox values
+const SQRT5 = Math.sqrt(5);
+const playerHitbox = {
+  noseX: 0,
+  noseY: 0,
+  leftWingX: 0,
+  leftWingY: 0,
+  rightWingX: 0,
+  rightWingY: 0,
+  invEdgeLenSqNoseToLeft: 0,
+  invEdgeLenSqLeftToRight: 0,
+  invEdgeLenSqRightToNose: 0,
+  boundingRadius: 0,
+  cachedRadius: -1
+};
+
+function updatePlayerHitbox() {
+  const cos = Math.cos(player.angle);
+  const sin = Math.sin(player.angle);
+  const radius = player.radius;
+
+  if (radius !== playerHitbox.cachedRadius) {
+    const radiusSq = radius * radius;
+    playerHitbox.invEdgeLenSqNoseToLeft  = 4 / (17 * radiusSq);
+    playerHitbox.invEdgeLenSqLeftToRight = 1 / radiusSq;
+    playerHitbox.invEdgeLenSqRightToNose = playerHitbox.invEdgeLenSqNoseToLeft;
+    playerHitbox.boundingRadius = (SQRT5 * radius) / 2;
+    playerHitbox.cachedRadius = radius;
+  }
+
+  const halfRadius = radius * 0.5;
+  playerHitbox.noseX      = player.x + radius * cos;
+  playerHitbox.noseY      = player.y + radius * sin;
+  playerHitbox.leftWingX  = player.x - radius * cos - halfRadius * sin;
+  playerHitbox.leftWingY  = player.y - radius * sin + halfRadius * cos;
+  playerHitbox.rightWingX = player.x - radius * cos + halfRadius * sin;
+  playerHitbox.rightWingY = player.y - radius * sin - halfRadius * cos;
+}
+
+// Squared distance from point (px, py) to segment (ax, ay) -> (bx, by)
+function segDistSq(px, py, ax, ay, bx, by, invLenSq) {
+  const dx = bx - ax, dy = by - ay;
+  let t = ((px - ax) * dx + (py - ay) * dy) * invLenSq;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  const ox = px - ax - t * dx, oy = py - ay - t * dy;
+  return ox * ox + oy * oy;
+}
+
+// Circle-vs-player-triangle hit test
+function playerHitTest(targetX, targetY, targetRadius) {
+  let dx = targetX - player.x;
+  if (dx > W * 0.5) dx -= W;
+  else if (dx < -W * 0.5) dx += W;
+  let dy = targetY - player.y;
+  if (dy > H * 0.5) dy -= H;
+  else if (dy < -H * 0.5) dy += H;
+
+  const nearestX = player.x + dx;
+  const nearestY = player.y + dy;
+
+  const broadRadius = playerHitbox.boundingRadius + targetRadius;
+  if (dx * dx + dy * dy > broadRadius * broadRadius) return false;
+
+  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } = playerHitbox;
+
+  // Check for circle overlapping an edge
+  const radiusSq = targetRadius * targetRadius;
+  return (
+    segDistSq(nearestX, nearestY, noseX, noseY, leftWingX, leftWingY, playerHitbox.invEdgeLenSqNoseToLeft) <= radiusSq ||
+    segDistSq(nearestX, nearestY, leftWingX, leftWingY, rightWingX, rightWingY, playerHitbox.invEdgeLenSqLeftToRight) <= radiusSq ||
+    segDistSq(nearestX, nearestY, rightWingX, rightWingY, noseX, noseY, playerHitbox.invEdgeLenSqRightToNose) <= radiusSq
+  );
+}
+
+// Updates worldVerts to current position/scale
+// Call once per asteroid per frame
+function updateAsteroidWorldVerts(t) {
+  const scale = t.healthBasedRadius / t.baseRadius;
+  const verts = t.worldVerts;
+  const shape = t.shape;
+  for (let i = 0; i < shape.length; i++) {
+    verts[i].x = t.x + shape[i].x * scale;
+    verts[i].y = t.y + shape[i].y * scale;
+  }
+}
+
+// Ray-cast point-in-polygon test
+function pointInPolygon(px, py, verts) {
+  const n = verts.length;
+  let inside = false;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = verts[i].x, yi = verts[i].y;
+    const xj = verts[j].x, yj = verts[j].y;
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// Polygon-vs-polygon hit test between player triangle and asteroid
+function playerAsteroidHitTest(t) {
+  let dx = t.x - player.x;
+  if (dx > W * 0.5) dx -= W;
+  else if (dx < -W * 0.5) dx += W;
+  let dy = t.y - player.y;
+  if (dy > H * 0.5) dy -= H;
+  else if (dy < -H * 0.5) dy += H;
+
+  // Broad phase (asteroid vertices reach at most 1.2x radius)
+  const boundR = t.healthBasedRadius * 1.2 + playerHitbox.boundingRadius;
+  if (dx * dx + dy * dy > boundR * boundR) return false;
+
+  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } = playerHitbox;
+  const verts = t.worldVerts;
+  const n = verts.length;
+
+  // Apply wrap offset to player vertices once
+  const wox = player.x + dx - t.x;
+  const woy = player.y + dy - t.y;
+  const nX = noseX - wox,      nY = noseY - woy;
+  const lX = leftWingX - wox,  lY = leftWingY - woy;
+  const rX = rightWingX - wox, rY = rightWingY - woy;
+
+  // Edge vectors
+  const nlX = lX - nX, nlY = lY - nY;
+  const lrX = rX - lX, lrY = rY - lY;
+  const rnX = nX - rX, rnY = nY - rY;
+
+  // Test for any player triangle vertex inside asteroid
+  for (let p = 0; p < 3; p++) {
+    const pvx = p === 0 ? nX : p === 1 ? lX : rX;
+    const pvy = p === 0 ? nY : p === 1 ? lY : rY;
+    let inside = false;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = verts[i].x, yi = verts[i].y;
+      const xj = verts[j].x, yj = verts[j].y;
+      if ((yi > pvy) !== (yj > pvy) && pvx < (xj - xi) * (pvy - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    if (inside) return true;
+  }
+
+  // Test for edge pair crossing
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const ax = verts[j].x, ay = verts[j].y;
+    const bx = verts[i].x, by = verts[i].y;
+    const abdx = bx - ax, abdy = by - ay;
+
+    const sN = abdx * (nY - ay) - abdy * (nX - ax);
+    const sL = abdx * (lY - ay) - abdy * (lX - ax);
+    const sR = abdx * (rY - ay) - abdy * (rX - ax);
+
+    if (sN * sL < 0) {
+      const sA = nlX * (ay - nY) - nlY * (ax - nX);
+      const sB = nlX * (by - nY) - nlY * (bx - nX);
+      if (sA * sB < 0) return true;
+    }
+    if (sL * sR < 0) {
+      const sA = lrX * (ay - lY) - lrY * (ax - lX);
+      const sB = lrX * (by - lY) - lrY * (bx - lX);
+      if (sA * sB < 0) return true;
+    }
+    if (sR * sN < 0) {
+      const sA = rnX * (ay - rY) - rnY * (ax - rX);
+      const sB = rnX * (by - rY) - rnY * (bx - rX);
+      if (sA * sB < 0) return true;
+    }
+  }
+
+  return false;
+}
+
 // ------------------------------------------------------
 // OFFSCREEN TEXT LABEL CREATION
 // ------------------------------------------------------
@@ -465,6 +639,9 @@ const SpawnManager = {
     target.diffSign = metadata.diffSign;
     target.baseRadius = 10 + health * 5;
     target.shape = this.generateAsteroidShape(target.baseRadius);
+    // Pre-allocate world-space vertex array
+    // (updated each frame by updateAsteroidWorldVerts)
+    target.worldVerts = target.shape.map(() => ({ x: 0, y: 0 }));
 
     const truncated = truncateTitle(title);
     target.labelCanvas = createOffscreenLabelCanvas(truncated);
@@ -1322,7 +1499,8 @@ function update(dt) {
     }
   }
 
-  // Update targets
+  // Update targets + hitbox
+  updatePlayerHitbox();
   for (let i = gameState.targets.length - 1; i >= 0; i--) {
     const t = gameState.targets[i];
     if (!t) continue;
@@ -1332,52 +1510,38 @@ function update(dt) {
     wrapPosition(t);
 
     if (t.isAsteroid) {
-      const radiusSq = t.healthBasedRadius * t.healthBasedRadius;
-      
-      // Early exit if asteroid is far from all bullets
-      let nearAnyBullet = false;
-      const asteroidBounds = t.healthBasedRadius + 50;
-      
-      for (const bullet of player.bullets) {
-        const roughDistSq = (t.x - bullet.x) * (t.x - bullet.x) + (t.y - bullet.y) * (t.y - bullet.y);
-        if (roughDistSq < asteroidBounds * asteroidBounds) {
-          nearAnyBullet = true;
-          break;
-        }
-      }
-      
-      if (nearAnyBullet) {
-        for (let j = player.bullets.length - 1; j >= 0; j--) {
-          const bullet = player.bullets[j];
-          const distSq = distanceSquared(t.x, t.y, bullet.x, bullet.y);
-          if (distSq < radiusSq) {
-            t.health--;
-            t.healthBasedRadius = 10 + t.health * 5;
-            gameState.score++;
-            const removedBullet = player.bullets.splice(j, 1)[0];
-            objectPools.returnBullet(removedBullet);
+      updateAsteroidWorldVerts(t);
 
-            SoundManager.play('pop');
-            if (t.health <= 0) {
-              spawnExplosion(t.x, t.y);
-              const removed = gameState.targets.splice(i, 1)[0];
-              cleanupLabelCanvas(removed);
-              setTimeout(() => {
-                SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
-              }, 0);
-              break;
-            }
+      // Per-bullet broad phase
+      const reach = t.healthBasedRadius * 1.2;
+      const reachSq = reach * reach;
+      for (let j = player.bullets.length - 1; j >= 0; j--) {
+        const bullet = player.bullets[j];
+        const bdx = t.x - bullet.x, bdy = t.y - bullet.y;
+        if (bdx * bdx + bdy * bdy > reachSq) continue;
+        if (pointInPolygon(bullet.x, bullet.y, t.worldVerts)) {
+          t.health--;
+          t.healthBasedRadius = 10 + t.health * 5;
+          gameState.score++;
+          const removedBullet = player.bullets.splice(j, 1)[0];
+          objectPools.returnBullet(removedBullet);
+
+          SoundManager.play('pop');
+          if (t.health <= 0) {
+            spawnExplosion(t.x, t.y);
+            const removed = gameState.targets.splice(i, 1)[0];
+            cleanupLabelCanvas(removed);
+            setTimeout(() => {
+              SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+            }, 0);
             break;
           }
+          break;
         }
       }
     }
 
-    const dx = t.x - player.x;
-    const dy = t.y - player.y;
-    const distSq = dx * dx + dy * dy;
-    const combined = (t.isAsteroid ? t.healthBasedRadius : 20) + player.radius;
-    if (distSq < combined * combined) {
+    if (t.isAsteroid ? playerAsteroidHitTest(t) : playerHitTest(t.x, t.y, 20)) {
       const isInvincible = player.shieldFrames > 0 || player.damageInvulnFrames > 0;
 
       if (t.isHeart) {
@@ -1529,14 +1693,11 @@ function draw() {
     if (t.isHeart) {
       drawHeart(t.x, t.y, 20);
     } else if (t.isAsteroid) {
-      const scale = t.healthBasedRadius / t.baseRadius;
+      // Reuse the world-space verts computed by updateAsteroidWorldVerts()
+      const verts = t.worldVerts;
       ctx.beginPath();
-      for (let i = 0; i < t.shape.length; i++) {
-        const vx = t.x + t.shape[i].x * scale;
-        const vy = t.y + t.shape[i].y * scale;
-        if (i === 0) ctx.moveTo(vx, vy);
-        else ctx.lineTo(vx, vy);
-      }
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i = 1; i < verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
       ctx.closePath();
       ctx.fillStyle = t.diffSign && t.diffSign < 0 ? '#a08080' : '#80a0c0';
       ctx.fill();
