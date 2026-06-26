@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 // ------------------------------------------------------
 // CONSTANTS & GAME CONFIGURATIONS
@@ -8,16 +8,16 @@ const EVENT_STREAM_CONFIG = {
   WATCHDOG_MS: 5 * 1000, // Check every 5s; reconnect if silent for 5s
   reconnectTimer: null,
   watchdogTimer: null,
-  lastEventTime: 0
+  lastEventTime: 0,
 };
 
 const POWERUP_TYPES = {
-  HEART: 'heart',
-  SHIELD: 'shield',
-  FASTER_FIRE: 'fasterFire',
-  EXPLOSION: 'explosion',
-  SLOW_MOTION: 'slowMotion',
-  TRIPLE_SHOT: 'tripleShot'
+  HEART: "heart",
+  SHIELD: "shield",
+  FASTER_FIRE: "fasterFire",
+  EXPLOSION: "explosion",
+  SLOW_MOTION: "slowMotion",
+  TRIPLE_SHOT: "tripleShot",
 };
 
 const GAME_CONFIG = {
@@ -27,8 +27,8 @@ const GAME_CONFIG = {
     BULLET_MAX_DISTANCE: 1200,
     SHOT_DELAY: {
       NORMAL: 200,
-      FAST: 50
-    }
+      FAST: 50,
+    },
   },
   POWERUP: {
     DURATION: {
@@ -36,21 +36,21 @@ const GAME_CONFIG = {
       FASTER_FIRE: 420,
       SLOW_MOTION: 420,
       SLOW_MOTION_TRANSITION: 120,
-      TRIPLE_SHOT: 420
-    }
+      TRIPLE_SHOT: 420,
+    },
   },
   PLAYER: {
-    DAMAGE_INVULN_FRAMES: 180
+    DAMAGE_INVULN_FRAMES: 180,
   },
   WIKI: {
     SELECTED_WIKIS: new Set(
-      JSON.parse(localStorage.getItem('selectedWikis')) || ['enwiki']
+      JSON.parse(localStorage.getItem("selectedWikis")) || ["enwiki"],
     ),
-    WIKI_COUNTS: {}
+    WIKI_COUNTS: {},
   },
   TIME: {
-    MAX_DELTA: 1000 / 30       // Cap delta if game falls behind
-  }
+    MAX_DELTA: 1000 / 30, // Cap delta if game falls behind
+  },
 };
 
 // ------------------------------------------------------
@@ -64,18 +64,18 @@ const WikiEventHandler = {
       { type: POWERUP_TYPES.FASTER_FIRE, chance: 0.4 },
       { type: POWERUP_TYPES.TRIPLE_SHOT, chance: 0.6 },
       { type: POWERUP_TYPES.EXPLOSION, chance: 0.8 },
-      { type: POWERUP_TYPES.SLOW_MOTION, chance: 1.0 }
+      { type: POWERUP_TYPES.SLOW_MOTION, chance: 1.0 },
     ];
 
     const metadata = {
       lang: langCode,
       wiki: data.wiki,
       user: data.user,
-      isNewUser: true
+      isNewUser: true,
     };
 
     const rand = Math.random();
-    const powerup = powerupTypes.find(p => rand < p.chance);
+    const powerup = powerupTypes.find((p) => rand < p.chance);
     if (powerup) {
       SpawnManager.spawnPowerup(powerup.type, username, metadata);
     }
@@ -87,14 +87,14 @@ const WikiEventHandler = {
     const health = mapDiffToHealth(Math.abs(diff));
 
     SpawnManager.spawnAsteroid(data.title, health, {
-      user: data.user || 'Unknown',
+      user: data.user || "Unknown",
       diff_url: data.notify_url,
       diff_size: Math.abs(diff),
       diffSign: diff < 0 ? -1 : 1,
       lang: langCode,
-      wiki: data.wiki
+      wiki: data.wiki,
     });
-  }
+  },
 };
 
 // ------------------------------------------------------
@@ -104,22 +104,35 @@ const objectPools = {
   bullets: [],
   sparks: [],
   getBullet() {
-    return this.bullets.pop() || {
-      x: 0, y: 0, vx: 0, vy: 0, traveledDistance: 0
-    };
+    return (
+      this.bullets.pop() || {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        traveledDistance: 0,
+      }
+    );
   },
   returnBullet(bullet) {
     bullet.traveledDistance = 0;
     this.bullets.push(bullet);
   },
   getSpark() {
-    return this.sparks.pop() || {
-      x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#ffa500'
-    };
+    return (
+      this.sparks.pop() || {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        life: 0,
+        color: "#ffa500",
+      }
+    );
   },
   returnSpark(spark) {
     this.sparks.push(spark);
-  }
+  },
 };
 
 // ------------------------------------------------------
@@ -139,22 +152,22 @@ const gameState = {
   gameOverTimer: 0,
   fatalArticle: null,
   lastPowerupEndSound: 0,
-  highScore: parseInt(localStorage.getItem('highScore')) || 0
+  highScore: parseInt(localStorage.getItem("highScore")) || 0,
 };
 
 // ------------------------------------------------------
 // DOM ELEMENTS
 // ------------------------------------------------------
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const sidePanel = document.getElementById('sidePanel');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const sidePanel = document.getElementById("sidePanel");
 
 const mobileControls = {
-  up: document.getElementById('btnUp'),
-  left: document.getElementById('btnLeft'),
-  right: document.getElementById('btnRight'),
-  shoot: document.getElementById('btnShoot'),
-  pause: document.getElementById('btnPause')
+  up: document.getElementById("btnUp"),
+  left: document.getElementById("btnLeft"),
+  right: document.getElementById("btnRight"),
+  shoot: document.getElementById("btnShoot"),
+  pause: document.getElementById("btnPause"),
 };
 
 const W = canvas.width;
@@ -174,7 +187,7 @@ const player = {
   speed: 0,
   maxSpeed: 10,
   friction: 0.985,
-  color: '#00ff00',
+  color: "#00ff00",
   bullets: [],
   bulletSpeed: 7,
   damageInvulnFrames: 0,
@@ -186,7 +199,7 @@ const player = {
   visible: true,
   vx: 0,
   vy: 0,
-  thrust: 0.15
+  thrust: 0.15,
 };
 
 // ------------------------------------------------------
@@ -194,21 +207,21 @@ const player = {
 // ------------------------------------------------------
 const SoundManager = {
   soundPaths: {
-    pop: 'audio/pop.mp3',
-    laser: 'audio/laser.mp3',
-    laserTripleShot: 'audio/laser2.mp3',
-    damaged: 'audio/damaged.mp3',
-    acquireHeart: 'audio/powerupHeart.mp3',
-    acquireInvincibility: 'audio/powerupShield.mp3',
-    acquireFasterFire: 'audio/powerupFasterFire.mp3',
-    acquireExplosion: 'audio/powerupExplosion.mp3',
-    acquireSlowMotion: 'audio/powerupSlowMotion.mp3',
-    acquireTripleShot: 'audio/powerupTripleShot.mp3',
-    finalExplosion: 'audio/finalExplosion.mp3',
-    gameToggle: 'audio/gameToggle.mp3',
-    thrust: 'audio/thrust.mp3',
-    powerupEnd: 'audio/powerupEnd.mp3',
-    powerupSpawn: 'audio/powerupSpawn.mp3'
+    pop: "audio/pop.mp3",
+    laser: "audio/laser.mp3",
+    laserTripleShot: "audio/laser2.mp3",
+    damaged: "audio/damaged.mp3",
+    acquireHeart: "audio/powerupHeart.mp3",
+    acquireInvincibility: "audio/powerupShield.mp3",
+    acquireFasterFire: "audio/powerupFasterFire.mp3",
+    acquireExplosion: "audio/powerupExplosion.mp3",
+    acquireSlowMotion: "audio/powerupSlowMotion.mp3",
+    acquireTripleShot: "audio/powerupTripleShot.mp3",
+    finalExplosion: "audio/finalExplosion.mp3",
+    gameToggle: "audio/gameToggle.mp3",
+    thrust: "audio/thrust.mp3",
+    powerupEnd: "audio/powerupEnd.mp3",
+    powerupSpawn: "audio/powerupSpawn.mp3",
   },
   volumes: {
     hit: 0.7,
@@ -226,7 +239,7 @@ const SoundManager = {
     gameToggle: 0.5,
     thrust: 0.3,
     powerupEnd: 0.4,
-    powerupSpawn: 0.4
+    powerupSpawn: 0.4,
   },
   sounds: new Map(),
   muted: false,
@@ -236,13 +249,16 @@ const SoundManager = {
   thrustGain: null,
 
   async init() {
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
 
-    const loadSound = async key => {
+    const loadSound = async (key) => {
       try {
         const response = await fetch(this.soundPaths[key]);
         const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        const audioBuffer =
+          await this.audioContext.decodeAudioData(arrayBuffer);
         this.buffers.set(key, audioBuffer);
       } catch (error) {
         console.warn(`Failed to load sound: ${key}`, error);
@@ -257,7 +273,8 @@ const SoundManager = {
   },
 
   play(soundName) {
-    if (this.muted || !this.audioContext || !this.buffers.has(soundName)) return;
+    if (this.muted || !this.audioContext || !this.buffers.has(soundName))
+      return;
     try {
       const source = this.audioContext.createBufferSource();
       const gainNode = this.audioContext.createGain();
@@ -273,17 +290,17 @@ const SoundManager = {
   },
 
   startThrust() {
-    if (this.muted || !this.audioContext || !this.buffers.has('thrust')) return;
+    if (this.muted || !this.audioContext || !this.buffers.has("thrust")) return;
     if (this.thrustSound) return; // already playing
     try {
       const source = this.audioContext.createBufferSource();
-      source.buffer = this.buffers.get('thrust');
+      source.buffer = this.buffers.get("thrust");
       source.loop = true;
       source.connect(this.thrustGain);
       source.start(0);
       this.thrustSound = source;
     } catch (error) {
-      console.warn('Thrust sound failed:', error);
+      console.warn("Thrust sound failed:", error);
     }
   },
 
@@ -292,7 +309,7 @@ const SoundManager = {
       try {
         this.thrustSound.stop();
       } catch (error) {
-        console.warn('Stopping thrust failed:', error);
+        console.warn("Stopping thrust failed:", error);
       }
       this.thrustSound = null;
     }
@@ -304,27 +321,28 @@ const SoundManager = {
       this.stopThrust();
     }
     return this.muted;
-  }
+  },
 };
 
 // Initialize SoundManager after first click
 document.addEventListener(
-  'click',
+  "click",
   () => {
     if (!SoundManager.audioContext) {
       SoundManager.init().catch(console.error);
     }
   },
-  { once: true }
+  { once: true },
 );
 
 // ------------------------------------------------------
 // UTILITY FUNCTIONS
 // ------------------------------------------------------
-const IP_EDITOR_REGEX = /^((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]\d|25[0-5])\.){3}([0-9]|[1-9][0-9]|1\d\d|2[0-4]\d|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))$/;
+const IP_EDITOR_REGEX =
+  /^((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]\d|25[0-5])\.){3}([0-9]|[1-9][0-9]|1\d\d|2[0-4]\d|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))$/;
 
 function isIPEditor(username) {
-  if (!username.includes('.') && !username.includes(':')) {
+  if (!username.includes(".") && !username.includes(":")) {
     return false;
   }
   return IP_EDITOR_REGEX.test(username);
@@ -349,11 +367,11 @@ function distanceSquared(x1, y1, x2, y2) {
 }
 
 function getCurrentAsteroidCount() {
-  return gameState.targets.filter(t => t.isAsteroid).length;
+  return gameState.targets.filter((t) => t.isAsteroid).length;
 }
 
 function prependSnippet(snippetDiv) {
-  const articleList = document.querySelector('#sidePanel .articleList');
+  const articleList = document.querySelector("#sidePanel .articleList");
   articleList.insertBefore(snippetDiv, articleList.firstChild);
 }
 
@@ -375,7 +393,7 @@ const playerHitbox = {
   invEdgeLenSqLeftToRight: 0,
   invEdgeLenSqRightToNose: 0,
   boundingRadius: 0,
-  cachedRadius: -1
+  cachedRadius: -1,
 };
 
 function updatePlayerHitbox() {
@@ -385,7 +403,7 @@ function updatePlayerHitbox() {
 
   if (radius !== playerHitbox.cachedRadius) {
     const radiusSq = radius * radius;
-    playerHitbox.invEdgeLenSqNoseToLeft  = 4 / (17 * radiusSq);
+    playerHitbox.invEdgeLenSqNoseToLeft = 4 / (17 * radiusSq);
     playerHitbox.invEdgeLenSqLeftToRight = 1 / radiusSq;
     playerHitbox.invEdgeLenSqRightToNose = playerHitbox.invEdgeLenSqNoseToLeft;
     playerHitbox.boundingRadius = (SQRT5 * radius) / 2;
@@ -393,20 +411,23 @@ function updatePlayerHitbox() {
   }
 
   const halfRadius = radius * 0.5;
-  playerHitbox.noseX      = player.x + radius * cos;
-  playerHitbox.noseY      = player.y + radius * sin;
-  playerHitbox.leftWingX  = player.x - radius * cos - halfRadius * sin;
-  playerHitbox.leftWingY  = player.y - radius * sin + halfRadius * cos;
+  playerHitbox.noseX = player.x + radius * cos;
+  playerHitbox.noseY = player.y + radius * sin;
+  playerHitbox.leftWingX = player.x - radius * cos - halfRadius * sin;
+  playerHitbox.leftWingY = player.y - radius * sin + halfRadius * cos;
   playerHitbox.rightWingX = player.x - radius * cos + halfRadius * sin;
   playerHitbox.rightWingY = player.y - radius * sin - halfRadius * cos;
 }
 
 // Squared distance from point (px, py) to segment (ax, ay) -> (bx, by)
 function segDistSq(px, py, ax, ay, bx, by, invLenSq) {
-  const dx = bx - ax, dy = by - ay;
+  const dx = bx - ax,
+    dy = by - ay;
   let t = ((px - ax) * dx + (py - ay) * dy) * invLenSq;
-  if (t < 0) t = 0; else if (t > 1) t = 1;
-  const ox = px - ax - t * dx, oy = py - ay - t * dy;
+  if (t < 0) t = 0;
+  else if (t > 1) t = 1;
+  const ox = px - ax - t * dx,
+    oy = py - ay - t * dy;
   return ox * ox + oy * oy;
 }
 
@@ -425,14 +446,39 @@ function playerHitTest(targetX, targetY, targetRadius) {
   const broadRadius = playerHitbox.boundingRadius + targetRadius;
   if (dx * dx + dy * dy > broadRadius * broadRadius) return false;
 
-  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } = playerHitbox;
+  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } =
+    playerHitbox;
 
   // Check for circle overlapping an edge
   const radiusSq = targetRadius * targetRadius;
   return (
-    segDistSq(nearestX, nearestY, noseX, noseY, leftWingX, leftWingY, playerHitbox.invEdgeLenSqNoseToLeft) <= radiusSq ||
-    segDistSq(nearestX, nearestY, leftWingX, leftWingY, rightWingX, rightWingY, playerHitbox.invEdgeLenSqLeftToRight) <= radiusSq ||
-    segDistSq(nearestX, nearestY, rightWingX, rightWingY, noseX, noseY, playerHitbox.invEdgeLenSqRightToNose) <= radiusSq
+    segDistSq(
+      nearestX,
+      nearestY,
+      noseX,
+      noseY,
+      leftWingX,
+      leftWingY,
+      playerHitbox.invEdgeLenSqNoseToLeft,
+    ) <= radiusSq ||
+    segDistSq(
+      nearestX,
+      nearestY,
+      leftWingX,
+      leftWingY,
+      rightWingX,
+      rightWingY,
+      playerHitbox.invEdgeLenSqLeftToRight,
+    ) <= radiusSq ||
+    segDistSq(
+      nearestX,
+      nearestY,
+      rightWingX,
+      rightWingY,
+      noseX,
+      noseY,
+      playerHitbox.invEdgeLenSqRightToNose,
+    ) <= radiusSq
   );
 }
 
@@ -453,9 +499,11 @@ function pointInPolygon(px, py, verts) {
   const n = verts.length;
   let inside = false;
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = verts[i].x, yi = verts[i].y;
-    const xj = verts[j].x, yj = verts[j].y;
-    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+    const xi = verts[i].x,
+      yi = verts[i].y;
+    const xj = verts[j].x,
+      yj = verts[j].y;
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
       inside = !inside;
     }
   }
@@ -475,21 +523,28 @@ function playerAsteroidHitTest(t) {
   const boundR = t.healthBasedRadius * 1.2 + playerHitbox.boundingRadius;
   if (dx * dx + dy * dy > boundR * boundR) return false;
 
-  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } = playerHitbox;
+  const { noseX, noseY, leftWingX, leftWingY, rightWingX, rightWingY } =
+    playerHitbox;
   const verts = t.worldVerts;
   const n = verts.length;
 
   // Apply wrap offset to player vertices once
   const wox = player.x + dx - t.x;
   const woy = player.y + dy - t.y;
-  const nX = noseX - wox,      nY = noseY - woy;
-  const lX = leftWingX - wox,  lY = leftWingY - woy;
-  const rX = rightWingX - wox, rY = rightWingY - woy;
+  const nX = noseX - wox,
+    nY = noseY - woy;
+  const lX = leftWingX - wox,
+    lY = leftWingY - woy;
+  const rX = rightWingX - wox,
+    rY = rightWingY - woy;
 
   // Edge vectors
-  const nlX = lX - nX, nlY = lY - nY;
-  const lrX = rX - lX, lrY = rY - lY;
-  const rnX = nX - rX, rnY = nY - rY;
+  const nlX = lX - nX,
+    nlY = lY - nY;
+  const lrX = rX - lX,
+    lrY = rY - lY;
+  const rnX = nX - rX,
+    rnY = nY - rY;
 
   // Test for any player triangle vertex inside asteroid
   for (let p = 0; p < 3; p++) {
@@ -497,9 +552,14 @@ function playerAsteroidHitTest(t) {
     const pvy = p === 0 ? nY : p === 1 ? lY : rY;
     let inside = false;
     for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = verts[i].x, yi = verts[i].y;
-      const xj = verts[j].x, yj = verts[j].y;
-      if ((yi > pvy) !== (yj > pvy) && pvx < (xj - xi) * (pvy - yi) / (yj - yi) + xi) {
+      const xi = verts[i].x,
+        yi = verts[i].y;
+      const xj = verts[j].x,
+        yj = verts[j].y;
+      if (
+        yi > pvy !== yj > pvy &&
+        pvx < ((xj - xi) * (pvy - yi)) / (yj - yi) + xi
+      ) {
         inside = !inside;
       }
     }
@@ -508,9 +568,12 @@ function playerAsteroidHitTest(t) {
 
   // Test for edge pair crossing
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    const ax = verts[j].x, ay = verts[j].y;
-    const bx = verts[i].x, by = verts[i].y;
-    const abdx = bx - ax, abdy = by - ay;
+    const ax = verts[j].x,
+      ay = verts[j].y;
+    const bx = verts[i].x,
+      by = verts[i].y;
+    const abdx = bx - ax,
+      abdy = by - ay;
 
     const sN = abdx * (nY - ay) - abdy * (nX - ax);
     const sL = abdx * (lY - ay) - abdy * (lX - ax);
@@ -541,29 +604,29 @@ function playerAsteroidHitTest(t) {
 // ------------------------------------------------------
 const labelCanvasCache = new Map();
 const labelCanvasRefCount = new Map(); // Track number of times each label is used, for repeat articles
-function createOffscreenLabelCanvas(text, font = '14px Anta', color = '#fff') {
+function createOffscreenLabelCanvas(text, font = "14px Anta", color = "#fff") {
   if (labelCanvasCache.has(text)) {
     labelCanvasRefCount.set(text, (labelCanvasRefCount.get(text) || 0) + 1);
     return labelCanvasCache.get(text);
   }
 
-  const tempCanvas = document.createElement('canvas');
-  const tempCtx = tempCanvas.getContext('2d');
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
   tempCtx.font = font;
 
   const padding = 6;
   const width = tempCtx.measureText(text).width + padding * 2;
   const height = 24; // approximate line height
 
-  const offCanvas = document.createElement('canvas');
+  const offCanvas = document.createElement("canvas");
   offCanvas.width = width;
   offCanvas.height = height;
 
-  const offCtx = offCanvas.getContext('2d');
+  const offCtx = offCanvas.getContext("2d");
   offCtx.font = font;
   offCtx.fillStyle = color;
-  offCtx.textAlign = 'center';
-  offCtx.textBaseline = 'middle';
+  offCtx.textAlign = "center";
+  offCtx.textBaseline = "middle";
   offCtx.fillText(text, width / 2, height / 2);
 
   labelCanvasCache.set(text, offCanvas);
@@ -601,31 +664,23 @@ const SpawnManager = {
 
   spawnOffscreenTarget(title) {
     const spawnEdge = Math.floor(Math.random() * 4);
-    const x = spawnEdge % 2 === 0
-      ? Math.random() * W
-      : spawnEdge === 1
-        ? W
-        : 0;
-    const y = spawnEdge % 2 === 0
-      ? spawnEdge === 0
-        ? H
-        : 0
-      : Math.random() * H;
+    const x = spawnEdge % 2 === 0 ? Math.random() * W : spawnEdge === 1 ? W : 0;
+    const y =
+      spawnEdge % 2 === 0 ? (spawnEdge === 0 ? H : 0) : Math.random() * H;
     return {
       x,
       y,
       title,
       speed: 1 + Math.random(),
-      angleToCenter: Math.atan2(H / 2 - y, W / 2 - x)
+      angleToCenter: Math.atan2(H / 2 - y, W / 2 - x),
     };
   },
 
   spawnAsteroid(title, health, metadata) {
-    
     if (gameState.paused || !gameState.gameStarted || gameState.gameOver) {
       return;
     }
-    
+
     const currentAsteroidCount = getCurrentAsteroidCount();
     if (currentAsteroidCount >= GAME_CONFIG.GAMEPLAY.MAX_ASTEROIDS) {
       return;
@@ -658,8 +713,9 @@ const SpawnManager = {
   },
 
   spawnPowerup(type, title, metadata) {
-    if (gameState.paused || !gameState.gameStarted || gameState.gameOver) return;
-    SoundManager.play('powerupSpawn');
+    if (gameState.paused || !gameState.gameStarted || gameState.gameOver)
+      return;
+    SoundManager.play("powerupSpawn");
 
     const target = this.spawnOffscreenTarget(title);
     target.metadata = metadata;
@@ -692,7 +748,7 @@ const SpawnManager = {
         return;
     }
     gameState.targets.push(target);
-  }
+  },
 };
 
 // ------------------------------------------------------
@@ -702,22 +758,23 @@ const SnippetManager = {
   pendingFetches: new Map(),
   lastFetchTime: 0,
   FETCH_DEBOUNCE_MS: 100,
-  
+
   async fetchAndDisplay(wiki, target) {
     if (!target?.title) {
-      console.warn('No title provided for snippet');
+      console.warn("No title provided for snippet");
       return;
     }
 
     try {
       if (target.metadata?.isNewUser) {
-        const snippetDiv = document.createElement('div');
-        snippetDiv.className = 'articleSnippet articleSnippet--new';
+        const snippetDiv = document.createElement("div");
+        snippetDiv.className = "articleSnippet articleSnippet--new";
 
         const showLangTag = GAME_CONFIG.WIKI.SELECTED_WIKIS.size > 1;
-        const langTag = showLangTag && target.metadata.lang
-          ? ` <span class="tag tag--lang">${target.metadata.lang}</span>`
-          : '';
+        const langTag =
+          showLangTag && target.metadata.lang
+            ? ` <span class="tag tag--lang">${target.metadata.lang}</span>`
+            : "";
 
         snippetDiv.innerHTML = `
           <strong>
@@ -732,22 +789,22 @@ const SnippetManager = {
 
       const now = performance.now();
       const cacheKey = `${wiki}:${target.title}`;
-      
+
       if (this.pendingFetches.has(cacheKey)) {
         return;
       }
-      
+
       if (now - this.lastFetchTime < this.FETCH_DEBOUNCE_MS) {
         setTimeout(() => {
           this.fetchAndDisplay(wiki, target);
         }, this.FETCH_DEBOUNCE_MS);
         return;
       }
-      
+
       this.pendingFetches.set(cacheKey, true);
       this.lastFetchTime = now;
 
-      const wikiCode = wiki.replace('wiki', '');
+      const wikiCode = wiki.replace("wiki", "");
       const domain = `${wikiCode}.wikipedia.org`;
       const encodedTitle = encodeURIComponent(target.title);
       const url = `https://${domain}/api/rest_v1/page/summary/${encodedTitle}`;
@@ -756,35 +813,40 @@ const SnippetManager = {
       this.pendingFetches.delete(cacheKey);
 
       if (!response.ok) {
-        console.warn('Snippet fetch failed:', response.status, url);
+        console.warn("Snippet fetch failed:", response.status, url);
         return;
       }
 
       const data = await response.json();
-      const snippetDiv = document.createElement('div');
-      snippetDiv.className = 'articleSnippet';
+      const snippetDiv = document.createElement("div");
+      snippetDiv.className = "articleSnippet";
       const metadata = target.metadata || {};
 
       const showLangTag = GAME_CONFIG.WIKI.SELECTED_WIKIS.size > 1;
-      const langTag = showLangTag && metadata.lang
-        ? ` <span class="tag tag--lang">${metadata.lang}</span>`
-        : '';
+      const langTag =
+        showLangTag && metadata.lang
+          ? ` <span class="tag tag--lang">${metadata.lang}</span>`
+          : "";
 
       if (metadata.newArticle) {
-        snippetDiv.style.backgroundColor = '#445566';
+        snippetDiv.style.backgroundColor = "#445566";
       }
 
       const newTag = metadata.newArticle
         ? ' <span class="tag tag--new">New Article</span>'
-        : '';
+        : "";
 
-      let extraHTML = '';
-      if (metadata.diff_url && metadata.diff_size !== undefined && metadata.user) {
+      let extraHTML = "";
+      if (
+        metadata.diff_url &&
+        metadata.diff_size !== undefined &&
+        metadata.user
+      ) {
         let displayUser = metadata.user;
         if (isIPEditor(displayUser)) {
-          displayUser = 'IP editor';
+          displayUser = "IP editor";
         }
-        const actionText = metadata.diffSign < 0 ? 'removed' : 'added';
+        const actionText = metadata.diffSign < 0 ? "removed" : "added";
         extraHTML = `
           <div class="extraInfo">
             <a href="${metadata.diff_url}" target="_blank">Edit</a> by ${displayUser} (${actionText} ${metadata.diff_size} bytes)
@@ -798,21 +860,23 @@ const SnippetManager = {
             ${target.title}
           </a>${newTag}${langTag}
         </strong>
-        ${data.thumbnail
-          ? `<img src="${data.thumbnail.source}" alt="Article Image" />`
-          : ''
+        ${
+          data.thumbnail
+            ? `<img src="${data.thumbnail.source}" alt="Article Image" />`
+            : ""
         }
-        <div>${data.extract.length > 200
-          ? data.extract.substring(0, 200) + '...'
-          : data.extract || ''
+        <div>${
+          data.extract.length > 200
+            ? data.extract.substring(0, 200) + "..."
+            : data.extract || ""
         }</div>
         ${extraHTML}
       `;
       prependSnippet(snippetDiv);
     } catch (err) {
-      console.error('Error handling snippet:', err);
+      console.error("Error handling snippet:", err);
     }
-  }
+  },
 };
 
 // ------------------------------------------------------
@@ -820,14 +884,14 @@ const SnippetManager = {
 // ------------------------------------------------------
 class SidebarManager {
   constructor() {
-    this.sidePanel = document.getElementById('sidePanel');
-    this.container = document.getElementById('sidebarContainer');
-    this.toggleButton = document.getElementById('toggleSidebar');
-    this.leftColumn = document.getElementById('leftColumn');
+    this.sidePanel = document.getElementById("sidePanel");
+    this.container = document.getElementById("sidebarContainer");
+    this.toggleButton = document.getElementById("toggleSidebar");
+    this.leftColumn = document.getElementById("leftColumn");
     this.isOpen = true;
 
     this.boundToggle = this.toggle.bind(this);
-    this.toggleButton.addEventListener('click', this.boundToggle);
+    this.toggleButton.addEventListener("click", this.boundToggle);
     this.initialize();
   }
 
@@ -838,15 +902,15 @@ class SidebarManager {
 
   toggle() {
     this.isOpen = !this.isOpen;
-    this.sidePanel.style.display = this.isOpen ? 'block' : 'none';
-    this.container.classList.toggle('closed', !this.isOpen);
+    this.sidePanel.style.display = this.isOpen ? "block" : "none";
+    this.container.classList.toggle("closed", !this.isOpen);
 
     if (this.isOpen) {
-      this.leftColumn.style.maxWidth = 'calc(100% - 330px)';
-      this.container.style.width = '300px';
+      this.leftColumn.style.maxWidth = "calc(100% - 330px)";
+      this.container.style.width = "300px";
     } else {
-      this.leftColumn.style.maxWidth = 'min(1000px, 100%)';
-      this.container.style.width = '0';
+      this.leftColumn.style.maxWidth = "min(1000px, 100%)";
+      this.container.style.width = "0";
     }
 
     this.updateButtonPosition();
@@ -854,16 +918,16 @@ class SidebarManager {
   }
 
   updateButtonPosition() {
-    this.toggleButton.style.left = this.isOpen ? '-30px' : '0px';
+    this.toggleButton.style.left = this.isOpen ? "-30px" : "0px";
   }
 
   updateChevronDirection() {
-    const chevron = this.isOpen ? '»' : '«';
+    const chevron = this.isOpen ? "»" : "«";
     this.toggleButton.innerHTML = chevron;
   }
 
   destroy() {
-    this.toggleButton.removeEventListener('click', this.boundToggle);
+    this.toggleButton.removeEventListener("click", this.boundToggle);
   }
 }
 
@@ -888,7 +952,9 @@ function initializeEventSource() {
 
   EVENT_STREAM_CONFIG.lastEventTime = Date.now();
 
-  eventSource = new EventSource('https://stream.wikimedia.org/v2/stream/recentchange');
+  eventSource = new EventSource(
+    "https://stream.wikimedia.org/v2/stream/recentchange",
+  );
   eventSource.onmessage = handleWikiEvent;
   eventSource.onerror = handleEventSourceError;
 
@@ -937,14 +1003,14 @@ function resumeStream() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   if (!document.hidden) {
     initializeEventSource();
   }
 });
 
 // Close EventStream when page is not active
-document.addEventListener('visibilitychange', () => {
+document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (eventSource) {
       eventSource.close();
@@ -966,7 +1032,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Reconnect immediately when network comes back online
-window.addEventListener('online', () => {
+window.addEventListener("online", () => {
   if (!document.hidden) {
     reconnectAttempts = 0;
     initializeEventSource();
@@ -974,11 +1040,25 @@ window.addEventListener('online', () => {
 });
 
 const WIKI_TO_LANG = {
-  enwiki: 'EN', cawiki: 'CA', dewiki: 'DE', eswiki: 'ES',
-  euwiki: 'EU', frwiki: 'FR', jawiki: 'JA', ruwiki: 'RU',
-  zhwiki: 'ZH', ptwiki: 'PT', itwiki: 'IT', plwiki: 'PL',
-  nlwiki: 'NL', svwiki: 'SV', viwiki: 'VI', trwiki: 'TR',
-  ukwiki: 'UK', arwiki: 'AR', fawiki: 'FA'
+  enwiki: "EN",
+  cawiki: "CA",
+  dewiki: "DE",
+  eswiki: "ES",
+  euwiki: "EU",
+  frwiki: "FR",
+  jawiki: "JA",
+  ruwiki: "RU",
+  zhwiki: "ZH",
+  ptwiki: "PT",
+  itwiki: "IT",
+  plwiki: "PL",
+  nlwiki: "NL",
+  svwiki: "SV",
+  viwiki: "VI",
+  trwiki: "TR",
+  ukwiki: "UK",
+  arwiki: "AR",
+  fawiki: "FA",
 };
 
 function handleWikiEvent(event) {
@@ -999,36 +1079,42 @@ function handleWikiEvent(event) {
       return;
     }
 
-    const langCode = WIKI_TO_LANG[data.wiki] || data.wiki.replace('wiki', '').toUpperCase();
+    const langCode =
+      WIKI_TO_LANG[data.wiki] || data.wiki.replace("wiki", "").toUpperCase();
     if (gameState.gameStarted && !gameState.paused && !gameState.gameOver) {
-      GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] = (GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] || 0) + 1;
+      GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] =
+        (GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] || 0) + 1;
       const countSpan = document.querySelector(
-        `.wikiToggle input[data-wiki="${data.wiki}"] + .articleCount`
+        `.wikiToggle input[data-wiki="${data.wiki}"] + .articleCount`,
       );
       if (countSpan) {
         countSpan.textContent = GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki];
       }
 
-      if (data.type === 'log' && data.log_type === 'newusers') {
+      if (data.type === "log" && data.log_type === "newusers") {
         WikiEventHandler.handleNewUser(data, langCode);
       } else if (data.namespace === 0) {
         if (
-          data.type === 'new' &&
-          !data.comment.toLowerCase().includes('redirect') &&
+          data.type === "new" &&
+          !data.comment.toLowerCase().includes("redirect") &&
           data.length.new > 150
         ) {
           SpawnManager.spawnPowerup(POWERUP_TYPES.HEART, data.title, {
             lang: langCode,
             wiki: data.wiki,
-            newArticle: true
+            newArticle: true,
           });
-        } else if (data.length && data.length.old !== undefined && data.length.new !== undefined) {
+        } else if (
+          data.length &&
+          data.length.old !== undefined &&
+          data.length.new !== undefined
+        ) {
           WikiEventHandler.handleArticleEdit(data, langCode);
         }
       }
     }
   } catch (err) {
-    console.error('Error parsing SSE:', err);
+    console.error("Error parsing SSE:", err);
   }
 }
 
@@ -1042,7 +1128,10 @@ function handleEventSourceError(err) {
       // Exponential backoff: 2s, 4s, 8s, capped at 30s
       const delay = Math.min(2000 * Math.pow(2, reconnectAttempts), 30000);
       reconnectAttempts++;
-      EVENT_STREAM_CONFIG.reconnectTimer = setTimeout(initializeEventSource, delay);
+      EVENT_STREAM_CONFIG.reconnectTimer = setTimeout(
+        initializeEventSource,
+        delay,
+      );
     }
   }
 }
@@ -1052,15 +1141,15 @@ function handleEventSourceError(err) {
 // ------------------------------------------------------
 function mapWASDToArrowKeys(keyCode) {
   switch (keyCode) {
-    case 'KeyW':
-    case 'KeyZ':
-      return 'ArrowUp';
-    case 'KeyA':
-      return 'ArrowLeft';
-    case 'KeyD':
-      return 'ArrowRight';
-    case 'KeyX':
-      return 'Space';
+    case "KeyW":
+    case "KeyZ":
+      return "ArrowUp";
+    case "KeyA":
+      return "ArrowLeft";
+    case "KeyD":
+      return "ArrowRight";
+    case "KeyX":
+      return "Space";
     default:
       return keyCode;
   }
@@ -1070,41 +1159,45 @@ const keyboardController = {
   init() {
     this.boundKeyDown = this.handleKeyDown.bind(this);
     this.boundKeyUp = this.handleKeyUp.bind(this);
-    window.addEventListener('keydown', this.boundKeyDown);
-    window.addEventListener('keyup', this.boundKeyUp);
+    window.addEventListener("keydown", this.boundKeyDown);
+    window.addEventListener("keyup", this.boundKeyUp);
   },
 
   destroy() {
-    window.removeEventListener('keydown', this.boundKeyDown);
-    window.removeEventListener('keyup', this.boundKeyUp);
+    window.removeEventListener("keydown", this.boundKeyDown);
+    window.removeEventListener("keyup", this.boundKeyUp);
   },
 
   handleKeyDown(e) {
     const mappedCode = mapWASDToArrowKeys(e.code);
 
     switch (e.code) {
-      case 'KeyP':
+      case "KeyP":
         if (gameState.gameStarted && !gameState.gameOver) {
           gameState.paused = !gameState.paused;
-          if (gameState.paused) { pauseStream(); } else { resumeStream(); }
+          if (gameState.paused) {
+            pauseStream();
+          } else {
+            resumeStream();
+          }
           needsRedraw = true;
           updatePauseButton();
-          SoundManager.play('gameToggle');
+          SoundManager.play("gameToggle");
         }
         return;
-      case 'KeyR':
+      case "KeyR":
         restartGame();
         return;
-      case 'KeyM': {
+      case "KeyM": {
         const isMuted = SoundManager.toggleMute();
-        updateMuteButtonIcon(document.getElementById('muteButton'), isMuted);
+        updateMuteButtonIcon(document.getElementById("muteButton"), isMuted);
         return;
       }
-      case 'KeyF':
+      case "KeyF":
         toggleFullscreen();
         needsRedraw = true;
         return;
-      case 'Enter':
+      case "Enter":
         if (gameState.gameOver) {
           restartGame();
         } else if (!gameState.gameStarted) {
@@ -1113,11 +1206,23 @@ const keyboardController = {
         return;
     }
 
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)) {
+    if (
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
+        mappedCode,
+      )
+    ) {
       e.preventDefault();
-      if (mappedCode === 'Space' && !gameState.gameStarted && !gameState.gameOver) {
+      if (
+        mappedCode === "Space" &&
+        !gameState.gameStarted &&
+        !gameState.gameOver
+      ) {
         startGame();
-      } else if (mappedCode === 'Space' && !gameState.paused && !gameState.gameOver) {
+      } else if (
+        mappedCode === "Space" &&
+        !gameState.paused &&
+        !gameState.gameOver
+      ) {
         shoot();
       }
       updateMobileButtonState(mappedCode, true);
@@ -1128,12 +1233,16 @@ const keyboardController = {
   handleKeyUp(e) {
     const mappedCode = mapWASDToArrowKeys(e.code);
 
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(mappedCode)) {
+    if (
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
+        mappedCode,
+      )
+    ) {
       e.preventDefault();
       updateMobileButtonState(mappedCode, false);
     }
     gameState.keys[mappedCode] = false;
-  }
+  },
 };
 keyboardController.init();
 
@@ -1141,8 +1250,8 @@ keyboardController.init();
 // MOBILE CONTROLS
 // ------------------------------------------------------
 function initMobileControls() {
-  const pointerDownEvents = ['mousedown', 'touchstart'];
-  const pointerUpEvents = ['mouseup', 'touchend', 'mouseleave', 'touchcancel'];
+  const pointerDownEvents = ["mousedown", "touchstart"];
+  const pointerUpEvents = ["mouseup", "touchend", "mouseleave", "touchcancel"];
   let shootInterval = null;
 
   const startShooting = () => {
@@ -1161,7 +1270,7 @@ function initMobileControls() {
     }
   };
 
-  pointerDownEvents.forEach(eventName => {
+  pointerDownEvents.forEach((eventName) => {
     mobileControls.up.addEventListener(eventName, () => {
       gameState.keys.ArrowUp = true;
     });
@@ -1174,7 +1283,7 @@ function initMobileControls() {
     mobileControls.shoot.addEventListener(eventName, startShooting);
   });
 
-  pointerUpEvents.forEach(eventName => {
+  pointerUpEvents.forEach((eventName) => {
     mobileControls.up.addEventListener(eventName, () => {
       gameState.keys.ArrowUp = false;
     });
@@ -1207,14 +1316,14 @@ function spawnExplosion(x, y) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 2 + Math.random() * 2;
     const spark = objectPools.getSpark();
-    
+
     spark.x = x;
     spark.y = y;
     spark.vx = Math.cos(angle) * speed;
     spark.vy = Math.sin(angle) * speed;
     spark.life = 30 + Math.floor(Math.random() * 20);
-    spark.color = '#ffa500';
-    
+    spark.color = "#ffa500";
+
     sparks.push(spark);
   }
   gameState.explosions.push({ sparks });
@@ -1224,13 +1333,13 @@ function updateExplosions() {
   for (let i = gameState.explosions.length - 1; i >= 0; i--) {
     const e = gameState.explosions[i];
     let activeSparks = 0;
-    
+
     for (let j = e.sparks.length - 1; j >= 0; j--) {
       const s = e.sparks[j];
       s.x += s.vx;
       s.y += s.vy;
       s.life--;
-      
+
       if (s.life <= 0) {
         const removedSpark = e.sparks.splice(j, 1)[0];
         objectPools.returnSpark(removedSpark);
@@ -1238,7 +1347,7 @@ function updateExplosions() {
         activeSparks++;
       }
     }
-    
+
     // Remove explosion if no active sparks
     if (activeSparks === 0) {
       gameState.explosions.splice(i, 1);
@@ -1248,8 +1357,8 @@ function updateExplosions() {
 
 function drawExplosions() {
   if (gameState.explosions.length === 0) return;
-  
-  ctx.fillStyle = '#ffa500';
+
+  ctx.fillStyle = "#ffa500";
   for (const explosion of gameState.explosions) {
     for (const spark of explosion.sparks) {
       ctx.fillRect(spark.x - 1, spark.y - 1, 3, 3);
@@ -1267,7 +1376,7 @@ function spawnFinalExplosion(x, y) {
     const angle = (Math.PI * 2 * i) / numSparks;
     const velocity = speed * (0.5 + Math.random());
     const spark = objectPools.getSpark();
-    
+
     spark.x = x;
     spark.y = y;
     spark.vx = Math.cos(angle) * velocity;
@@ -1275,10 +1384,10 @@ function spawnFinalExplosion(x, y) {
     spark.life = lifetime;
     spark.maxLife = lifetime;
     spark.size = 4 + Math.random() * 4;
-    
+
     sparks.push(spark);
   }
-  SoundManager.play('finalExplosion');
+  SoundManager.play("finalExplosion");
   gameState.explosions.push({ sparks });
 }
 
@@ -1312,10 +1421,14 @@ const gamepadController = {
           startGame();
         } else {
           gameState.paused = !gameState.paused;
-          if (gameState.paused) { pauseStream(); } else { resumeStream(); }
+          if (gameState.paused) {
+            pauseStream();
+          } else {
+            resumeStream();
+          }
           needsRedraw = true;
           updatePauseButton();
-          SoundManager.play('gameToggle');
+          SoundManager.play("gameToggle");
         }
         this.startLock = true;
       }
@@ -1323,8 +1436,14 @@ const gamepadController = {
       this.startLock = false;
     }
 
-    const shootPressed = gamepad.buttons[2]?.pressed || gamepad.buttons[1]?.pressed || gamepad.buttons[7]?.pressed;
-    const thrustPressed = gamepad.buttons[0]?.pressed || gamepad.buttons[12]?.pressed || (gamepad.axes[1] ?? 0) < -this.deadzone;
+    const shootPressed =
+      gamepad.buttons[2]?.pressed ||
+      gamepad.buttons[1]?.pressed ||
+      gamepad.buttons[7]?.pressed;
+    const thrustPressed =
+      gamepad.buttons[0]?.pressed ||
+      gamepad.buttons[12]?.pressed ||
+      (gamepad.axes[1] ?? 0) < -this.deadzone;
     if (!gameState.gameStarted || gameState.gameOver) {
       if (shootPressed && !this.shootStartLock) {
         gameState.gameOver ? restartGame() : startGame();
@@ -1357,8 +1476,8 @@ const gamepadController = {
     } else {
       gameState.keysGamepad.ArrowRight = false;
     }
-    updateMobileButtonState('ArrowLeft', gameState.keysGamepad.ArrowLeft);
-    updateMobileButtonState('ArrowRight', gameState.keysGamepad.ArrowRight);
+    updateMobileButtonState("ArrowLeft", gameState.keysGamepad.ArrowLeft);
+    updateMobileButtonState("ArrowRight", gameState.keysGamepad.ArrowRight);
 
     const leftY = gamepad.axes[1];
     const dpadUp = gamepad.buttons[12]?.pressed;
@@ -1369,15 +1488,15 @@ const gamepadController = {
     } else {
       gameState.keysGamepad.ArrowUp = false;
     }
-    updateMobileButtonState('ArrowUp', gameState.keysGamepad.ArrowUp);
+    updateMobileButtonState("ArrowUp", gameState.keysGamepad.ArrowUp);
 
     if (shootPressed) {
       gameState.keysGamepad.Space = true;
     } else {
       gameState.keysGamepad.Space = false;
     }
-    updateMobileButtonState('Space', gameState.keysGamepad.Space);
-  }
+    updateMobileButtonState("Space", gameState.keysGamepad.Space);
+  },
 };
 
 // ------------------------------------------------------
@@ -1396,7 +1515,7 @@ function update(dt) {
       SoundManager.stopThrust();
       if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
-        localStorage.setItem('highScore', gameState.score);
+        localStorage.setItem("highScore", gameState.score);
       }
     }
     updateExplosions();
@@ -1454,7 +1573,8 @@ function update(dt) {
     player.slowMotionFrames--;
     if (player.slowMotionFrames <= 0) {
       player.slowMotionFrames = 0;
-      player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+      player.slowMotionTransition =
+        GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
     }
   }
   if (player.slowMotionTransition > 0) {
@@ -1465,15 +1585,19 @@ function update(dt) {
   let speedMultiplier = 1;
   if (player.slowMotionFrames > 0) {
     if (player.slowMotionTransition > 0) {
-      const progress = 1 - player.slowMotionTransition /
-        GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+      const progress =
+        1 -
+        player.slowMotionTransition /
+          GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
       speedMultiplier = 1 - 0.8 * progress;
     } else {
       speedMultiplier = 0.2;
     }
   } else if (player.slowMotionTransition > 0) {
-    const progress = 1 - player.slowMotionTransition /
-      GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+    const progress =
+      1 -
+      player.slowMotionTransition /
+        GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
     speedMultiplier = 0.2 + 0.8 * progress;
   }
 
@@ -1517,7 +1641,8 @@ function update(dt) {
       const reachSq = reach * reach;
       for (let j = player.bullets.length - 1; j >= 0; j--) {
         const bullet = player.bullets[j];
-        const bdx = t.x - bullet.x, bdy = t.y - bullet.y;
+        const bdx = t.x - bullet.x,
+          bdy = t.y - bullet.y;
         if (bdx * bdx + bdy * bdy > reachSq) continue;
         if (pointInPolygon(bullet.x, bullet.y, t.worldVerts)) {
           t.health--;
@@ -1526,13 +1651,16 @@ function update(dt) {
           const removedBullet = player.bullets.splice(j, 1)[0];
           objectPools.returnBullet(removedBullet);
 
-          SoundManager.play('pop');
+          SoundManager.play("pop");
           if (t.health <= 0) {
             spawnExplosion(t.x, t.y);
             const removed = gameState.targets.splice(i, 1)[0];
             cleanupLabelCanvas(removed);
             setTimeout(() => {
-              SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+              SnippetManager.fetchAndDisplay(
+                removed.metadata?.wiki || "enwiki",
+                removed,
+              );
             }, 0);
             break;
           }
@@ -1542,42 +1670,55 @@ function update(dt) {
     }
 
     if (t.isAsteroid ? playerAsteroidHitTest(t) : playerHitTest(t.x, t.y, 20)) {
-      const isInvincible = player.shieldFrames > 0 || player.damageInvulnFrames > 0;
+      const isInvincible =
+        player.shieldFrames > 0 || player.damageInvulnFrames > 0;
 
       if (t.isHeart) {
-        SoundManager.play('acquireHeart');
+        SoundManager.play("acquireHeart");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
         gameState.lives++;
       } else if (t.isShield) {
-        SoundManager.play('acquireInvincibility');
+        SoundManager.play("acquireInvincibility");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
         player.shieldFrames = GAME_CONFIG.POWERUP.DURATION.INVINCIBILITY;
       } else if (t.isFasterFire) {
-        SoundManager.play('acquireFasterFire');
+        SoundManager.play("acquireFasterFire");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
         player.fasterFireFrames = GAME_CONFIG.POWERUP.DURATION.FASTER_FIRE;
       } else if (t.isExplosion) {
-        SoundManager.play('acquireExplosion');
+        SoundManager.play("acquireExplosion");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
 
         let pointsGained = 0;
-        
+
         for (let k = gameState.targets.length - 1; k >= 0; k--) {
           const target = gameState.targets[k];
           if (target.isAsteroid) {
@@ -1586,39 +1727,47 @@ function update(dt) {
             const removedAsteroid = gameState.targets.splice(k, 1)[0];
             cleanupLabelCanvas(removedAsteroid);
             SnippetManager.fetchAndDisplay(
-              removedAsteroid.metadata?.wiki || 'enwiki',
-              removedAsteroid
+              removedAsteroid.metadata?.wiki || "enwiki",
+              removedAsteroid,
             );
           }
         }
         gameState.score += pointsGained;
       } else if (t.isSlowMotion) {
-        SoundManager.play('acquireSlowMotion');
+        SoundManager.play("acquireSlowMotion");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
 
         if (player.slowMotionFrames === 0) {
           if (player.slowMotionTransition > 0) {
             player.slowMotionTransition =
-              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION - player.slowMotionTransition;
+              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION -
+              player.slowMotionTransition;
           } else {
-            player.slowMotionTransition = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
+            player.slowMotionTransition =
+              GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION_TRANSITION;
           }
         }
         player.slowMotionFrames = GAME_CONFIG.POWERUP.DURATION.SLOW_MOTION;
       } else if (t.isTripleShot) {
-        SoundManager.play('acquireTripleShot');
+        SoundManager.play("acquireTripleShot");
         const removed = gameState.targets.splice(i, 1)[0];
         cleanupLabelCanvas(removed);
         setTimeout(() => {
-          SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+          SnippetManager.fetchAndDisplay(
+            removed.metadata?.wiki || "enwiki",
+            removed,
+          );
         }, 0);
         player.tripleShotFrames = GAME_CONFIG.POWERUP.DURATION.TRIPLE_SHOT;
       } else if (t.isAsteroid && !isInvincible) {
-        SoundManager.play('damaged');
+        SoundManager.play("damaged");
         t.health--;
         t.healthBasedRadius = 10 + t.health * 5;
         if (t.health <= 0) {
@@ -1626,7 +1775,10 @@ function update(dt) {
           const removed = gameState.targets.splice(i, 1)[0];
           cleanupLabelCanvas(removed);
           setTimeout(() => {
-            SnippetManager.fetchAndDisplay(removed.metadata?.wiki || 'enwiki', removed);
+            SnippetManager.fetchAndDisplay(
+              removed.metadata?.wiki || "enwiki",
+              removed,
+            );
           }, 0);
         }
         gameState.lives--;
@@ -1636,7 +1788,7 @@ function update(dt) {
           gameState.gameOverTimer = 120;
           gameState.fatalArticle = {
             ...t.metadata,
-            title: t.title
+            title: t.title,
           };
           SoundManager.stopThrust();
         } else {
@@ -1654,8 +1806,11 @@ function update(dt) {
     (player.tripleShotFrames > 0 && player.tripleShotFrames <= 60)
   ) {
     // Only play sound if not played in last 1 second
-    if (!gameState.lastPowerupEndSound || now - gameState.lastPowerupEndSound > 1000) {
-      SoundManager.play('powerupEnd');
+    if (
+      !gameState.lastPowerupEndSound ||
+      now - gameState.lastPowerupEndSound > 1000
+    ) {
+      SoundManager.play("powerupEnd");
       gameState.lastPowerupEndSound = now;
     }
   }
@@ -1680,7 +1835,7 @@ function draw() {
   }
 
   if (player.bullets.length > 0) {
-    const bulletColor = player.fasterFireFrames > 0 ? '#ffff00' : '#fff';
+    const bulletColor = player.fasterFireFrames > 0 ? "#ffff00" : "#fff";
     ctx.fillStyle = bulletColor;
     ctx.beginPath();
     for (const bullet of player.bullets) {
@@ -1699,7 +1854,7 @@ function draw() {
       ctx.moveTo(verts[0].x, verts[0].y);
       for (let i = 1; i < verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
       ctx.closePath();
-      ctx.fillStyle = t.diffSign && t.diffSign < 0 ? '#a08080' : '#80a0c0';
+      ctx.fillStyle = t.diffSign && t.diffSign < 0 ? "#a08080" : "#80a0c0";
       ctx.fill();
     } else if (t.isShield) {
       drawPowerupShield(t.x, t.y, 15);
@@ -1727,12 +1882,12 @@ function draw() {
 
   if (gameState.paused) {
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#fff';
-    ctx.font = '48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('PAUSED', W / 2, H / 2);
+    ctx.fillStyle = "#fff";
+    ctx.font = "48px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("PAUSED", W / 2, H / 2);
     ctx.restore();
   }
 
@@ -1745,32 +1900,36 @@ function draw() {
 
 function drawGameOver() {
   ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff';
-  ctx.font = '48px Anta';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('GAME OVER', W / 2, H / 2 - 20);
+  ctx.fillStyle = "#fff";
+  ctx.font = "48px Anta";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("GAME OVER", W / 2, H / 2 - 20);
 
-  ctx.font = '24px Anta';
-  ctx.fillText(`Score: ${gameState.score}   High Score: ${gameState.highScore}`, W / 2, H / 2 + 30);
+  ctx.font = "24px Anta";
+  ctx.fillText(
+    `Score: ${gameState.score}   High Score: ${gameState.highScore}`,
+    W / 2,
+    H / 2 + 30,
+  );
 
   drawRestartButton();
 
   // Display fatal article link
   if (gameState.fatalArticle && gameState.fatalArticle.diff_url) {
-    ctx.font = '20px Anta';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Your final asteroid:', W / 2, H * 0.75);
-    ctx.fillStyle = '#66ccff';
+    ctx.font = "20px Anta";
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Your final asteroid:", W / 2, H * 0.75);
+    ctx.fillStyle = "#66ccff";
     ctx.fillText(gameState.fatalArticle.title, W / 2, H * 0.75 + 30);
     const textMetrics = ctx.measureText(gameState.fatalArticle.title);
     gameState.articleLinkBounds = {
       x: W / 2 - textMetrics.width / 2,
       y: H * 0.75 + 20,
       width: textMetrics.width,
-      height: 20
+      height: 20,
     };
   }
 
@@ -1780,18 +1939,18 @@ function drawGameOver() {
 function drawPlayer() {
   const cos = Math.cos(player.angle);
   const sin = Math.sin(player.angle);
-  
+
   // Original player triangle points
   const points = [
     { x: player.radius, y: 0 },
     { x: -player.radius, y: player.radius / 2 },
-    { x: -player.radius, y: -player.radius / 2 }
+    { x: -player.radius, y: -player.radius / 2 },
   ];
-  
+
   // Rotate and translate
-  const worldPoints = points.map(p => ({
+  const worldPoints = points.map((p) => ({
     x: player.x + (p.x * cos - p.y * sin),
-    y: player.y + (p.x * sin + p.y * cos)
+    y: player.y + (p.x * sin + p.y * cos),
   }));
 
   // Thrust flame
@@ -1800,16 +1959,16 @@ function drawPlayer() {
     const thrustPoints = [
       { x: -player.radius, y: player.radius * 0.3 },
       { x: -player.radius - 10, y: 0 },
-      { x: -player.radius, y: -player.radius * 0.3 }
+      { x: -player.radius, y: -player.radius * 0.3 },
     ];
-    
+
     // Rotate and translate
-    const worldThrustPoints = thrustPoints.map(p => ({
+    const worldThrustPoints = thrustPoints.map((p) => ({
       x: player.x + (p.x * cos - p.y * sin),
-      y: player.y + (p.x * sin + p.y * cos)
+      y: player.y + (p.x * sin + p.y * cos),
     }));
-    
-    ctx.fillStyle = 'orange';
+
+    ctx.fillStyle = "orange";
     ctx.beginPath();
     ctx.moveTo(worldThrustPoints[0].x, worldThrustPoints[0].y);
     ctx.lineTo(worldThrustPoints[1].x, worldThrustPoints[1].y);
@@ -1843,7 +2002,7 @@ function drawPlayer() {
       }
     }
     if (ringShouldDraw) {
-      ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+      ctx.strokeStyle = "rgba(0,255,255,0.5)";
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
@@ -1853,7 +2012,7 @@ function drawPlayer() {
 }
 
 function drawHeart(x, y, size) {
-  ctx.fillStyle = '#ff0000';
+  ctx.fillStyle = "#ff0000";
   ctx.beginPath();
   ctx.moveTo(x, y - size * 0.25);
   ctx.bezierCurveTo(
@@ -1862,7 +2021,7 @@ function drawHeart(x, y, size) {
     x - size * 0.5,
     y + size * 0.2,
     x,
-    y + size * 0.4
+    y + size * 0.4,
   );
   ctx.bezierCurveTo(
     x + size * 0.5,
@@ -1870,7 +2029,7 @@ function drawHeart(x, y, size) {
     x + size * 0.5,
     y - size * 0.5,
     x,
-    y - size * 0.25
+    y - size * 0.25,
   );
   ctx.closePath();
   ctx.fill();
@@ -1879,20 +2038,23 @@ function drawHeart(x, y, size) {
 function drawPowerupShield(x, y, radius) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = '#00ffff';
+  ctx.strokeStyle = "#00ffff";
   ctx.lineWidth = 3;
   ctx.stroke();
 }
 
 function drawPowerupFasterFire(x, y, radius) {
-  ctx.strokeStyle = '#ffff00';
+  ctx.strokeStyle = "#ffff00";
   ctx.lineWidth = 3;
   ctx.beginPath();
   const step = Math.PI / 6;
   const dotAngle = Math.PI / 12;
   for (let i = 0; i < 12; i++) {
     const startAngle = i * step;
-    ctx.moveTo(x + Math.cos(startAngle) * radius, y + Math.sin(startAngle) * radius);
+    ctx.moveTo(
+      x + Math.cos(startAngle) * radius,
+      y + Math.sin(startAngle) * radius,
+    );
     ctx.arc(x, y, radius, startAngle, startAngle + dotAngle);
   }
   ctx.stroke();
@@ -1915,13 +2077,13 @@ function drawStar(cx, cy, spikes, outerRadius, innerRadius, fillColor) {
 }
 
 function drawPowerupExplosion(x, y, radius) {
-  drawStar(x, y, 10, radius, radius * 0.5, '#ff9900');
+  drawStar(x, y, 10, radius, radius * 0.5, "#ff9900");
 }
 
 function drawPowerupSlowMotion(x, y, radius) {
-  ctx.strokeStyle = '#9966ff';
+  ctx.strokeStyle = "#9966ff";
   ctx.lineWidth = 2;
-  
+
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.stroke();
@@ -1934,7 +2096,7 @@ function drawPowerupSlowMotion(x, y, radius) {
 }
 
 function drawPowerupTripleShot(x, y, radius) {
-  ctx.fillStyle = '#ff66ff';
+  ctx.fillStyle = "#ff66ff";
   const dotRadius = radius * 0.25;
 
   ctx.beginPath();
@@ -1952,22 +2114,26 @@ function drawPowerupTripleShot(x, y, radius) {
 }
 
 function drawScore() {
-  ctx.font = '20px Anta';
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(`Score: ${gameState.score}   High Score: ${gameState.highScore}`, 30, 20);
+  ctx.font = "20px Anta";
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(
+    `Score: ${gameState.score}   High Score: ${gameState.highScore}`,
+    30,
+    20,
+  );
 }
 
 function drawLives() {
-  ctx.font = '20px Anta';
-  ctx.fillStyle = '#ff0000';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.font = "20px Anta";
+  ctx.fillStyle = "#ff0000";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
   const baseX = 30;
   const baseY = 50;
   for (let i = 0; i < gameState.lives; i++) {
-    ctx.fillText('♥', baseX + i * 25, baseY);
+    ctx.fillText("♥", baseX + i * 25, baseY);
   }
 }
 
@@ -1976,16 +2142,17 @@ function drawLives() {
 // ------------------------------------------------------
 function shoot() {
   const now = performance.now();
-  const currentDelay = player.fasterFireFrames > 0 ? shotDelayFast : shotDelayNormal;
+  const currentDelay =
+    player.fasterFireFrames > 0 ? shotDelayFast : shotDelayNormal;
   if (now - gameState.lastShotTime < currentDelay) return;
 
-  SoundManager.play(player.tripleShotFrames > 0 ? 'laserTripleShot' : 'laser');
+  SoundManager.play(player.tripleShotFrames > 0 ? "laserTripleShot" : "laser");
   gameState.lastShotTime = now;
 
   const bulletSpeed = player.bulletSpeed;
   const baseAngle = player.angle;
 
-  const createBullet = angle => {
+  const createBullet = (angle) => {
     const bullet = objectPools.getBullet();
     bullet.x = player.x + Math.cos(angle) * player.radius;
     bullet.y = player.y + Math.sin(angle) * player.radius;
@@ -2015,7 +2182,7 @@ function startGameLoop() {
     animationFrameId = null;
   }
 
-  const gameLoop = timestamp => {
+  const gameLoop = (timestamp) => {
     animationFrameId = requestAnimationFrame(gameLoop);
 
     timeState.currentTime = timestamp;
@@ -2029,7 +2196,8 @@ function startGameLoop() {
 
     gamepadController.update();
 
-    const isPlaying = gameState.gameStarted && !gameState.gameOver && !gameState.paused;
+    const isPlaying =
+      gameState.gameStarted && !gameState.gameOver && !gameState.paused;
     if (isPlaying) {
       update(timeState.deltaTime);
       draw();
@@ -2043,7 +2211,7 @@ function startGameLoop() {
 }
 
 function restartGame() {
-  SoundManager.play('gameToggle');
+  SoundManager.play("gameToggle");
   resetGameState();
   resumeStream();
   needsRedraw = true;
@@ -2062,35 +2230,35 @@ const sidebarManager = new SidebarManager();
 // ------------------------------------------------------
 // LANGUAGE SELECTOR
 // ------------------------------------------------------
-document.querySelectorAll('.wikiToggle input').forEach(checkbox => {
+document.querySelectorAll(".wikiToggle input").forEach((checkbox) => {
   const wiki = checkbox.dataset.wiki;
   checkbox.checked = GAME_CONFIG.WIKI.SELECTED_WIKIS.has(wiki);
   if (checkbox.checked) {
-    checkbox.parentElement.classList.add('active');
+    checkbox.parentElement.classList.add("active");
   }
-  const countSpan = checkbox.parentElement.querySelector('.articleCount');
+  const countSpan = checkbox.parentElement.querySelector(".articleCount");
   if (countSpan) {
-    countSpan.textContent = '0';
+    countSpan.textContent = "0";
   }
 
-  checkbox.addEventListener('change', function () {
+  checkbox.addEventListener("change", function () {
     const wikiCode = this.dataset.wiki;
     if (this.checked) {
       GAME_CONFIG.WIKI.SELECTED_WIKIS.add(wikiCode);
-      this.parentElement.classList.add('active');
+      this.parentElement.classList.add("active");
       GAME_CONFIG.WIKI.WIKI_COUNTS[wikiCode] = 0;
     } else {
       GAME_CONFIG.WIKI.SELECTED_WIKIS.delete(wikiCode);
-      this.parentElement.classList.remove('active');
+      this.parentElement.classList.remove("active");
       GAME_CONFIG.WIKI.WIKI_COUNTS[wikiCode] = 0;
     }
-    const countSpan = this.parentElement.querySelector('.articleCount');
+    const countSpan = this.parentElement.querySelector(".articleCount");
     if (countSpan) {
-      countSpan.textContent = '0';
+      countSpan.textContent = "0";
     }
     localStorage.setItem(
-      'selectedWikis',
-      JSON.stringify([...GAME_CONFIG.WIKI.SELECTED_WIKIS])
+      "selectedWikis",
+      JSON.stringify([...GAME_CONFIG.WIKI.SELECTED_WIKIS]),
     );
   });
 });
@@ -2098,8 +2266,8 @@ document.querySelectorAll('.wikiToggle input').forEach(checkbox => {
 // ------------------------------------------------------
 // FULLSCREEN HANDLING
 // ------------------------------------------------------
-const fullscreenButton = document.getElementById('fullscreenButton');
-const canvasContainer = document.querySelector('.canvasContainer');
+const fullscreenButton = document.getElementById("fullscreenButton");
+const canvasContainer = document.querySelector(".canvasContainer");
 
 function toggleFullscreen() {
   const container = canvasContainer;
@@ -2108,7 +2276,7 @@ function toggleFullscreen() {
     document.webkitFullscreenElement ||
     document.mozFullScreenElement ||
     document.msFullscreenElement ||
-    container.classList.contains('fullscreen');
+    container.classList.contains("fullscreen");
 
   if (isFull) {
     if (document.fullscreenElement) {
@@ -2120,11 +2288,11 @@ function toggleFullscreen() {
     } else if (document.msFullscreenElement) {
       document.msExitFullscreen();
     }
-    container.classList.remove('fullscreen');
-    document.body.style.overflow = '';
+    container.classList.remove("fullscreen");
+    document.body.style.overflow = "";
   } else {
-    container.classList.add('fullscreen');
-    document.body.style.overflow = 'hidden';
+    container.classList.add("fullscreen");
+    document.body.style.overflow = "hidden";
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else if (document.webkitFullscreenElement) {
@@ -2138,7 +2306,7 @@ function toggleFullscreen() {
   }
 }
 
-fullscreenButton.addEventListener('click', () => {
+fullscreenButton.addEventListener("click", () => {
   toggleFullscreen();
   needsRedraw = true;
 });
@@ -2147,12 +2315,16 @@ fullscreenButton.addEventListener('click', () => {
 // MOBILE PAUSE BUTTON
 // ------------------------------------------------------
 if (mobileControls.pause) {
-  mobileControls.pause.addEventListener('click', () => {
+  mobileControls.pause.addEventListener("click", () => {
     gameState.paused = !gameState.paused;
-    if (gameState.paused) { pauseStream(); } else { resumeStream(); }
+    if (gameState.paused) {
+      pauseStream();
+    } else {
+      resumeStream();
+    }
     needsRedraw = true;
     updatePauseButton();
-    SoundManager.play('gameToggle');
+    SoundManager.play("gameToggle");
   });
 }
 
@@ -2182,16 +2354,18 @@ function resetGameState() {
   gameState.gameOverTimer = 0;
 
   // Clear sidebar articles and stats
-  const articleList = document.querySelector('#sidePanel .articleList');
+  const articleList = document.querySelector("#sidePanel .articleList");
   if (articleList) {
-    articleList.innerHTML = '';
+    articleList.innerHTML = "";
   }
-  Object.keys(GAME_CONFIG.WIKI.WIKI_COUNTS).forEach(wiki => {
+  Object.keys(GAME_CONFIG.WIKI.WIKI_COUNTS).forEach((wiki) => {
     GAME_CONFIG.WIKI.WIKI_COUNTS[wiki] = 0;
   });
-  document.querySelectorAll('.wikiToggle .articleCount').forEach(countSpan => {
-    countSpan.textContent = '0';
-  });
+  document
+    .querySelectorAll(".wikiToggle .articleCount")
+    .forEach((countSpan) => {
+      countSpan.textContent = "0";
+    });
 
   // Clear label cache
   labelCanvasCache.clear();
@@ -2230,17 +2404,17 @@ function drawRestartButton() {
   ctx.beginPath();
   drawRoundedRect(ctx, x, y, buttonWidth, buttonHeight, radius);
   ctx.save();
-  ctx.fillStyle = '#444';
-  ctx.strokeStyle = '#fff';
+  ctx.fillStyle = "#444";
+  ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = '#fff';
-  ctx.font = '24px Anta';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('RESTART', W / 2, y + buttonHeight / 2);
+  ctx.fillStyle = "#fff";
+  ctx.font = "24px Anta";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("RESTART", W / 2, y + buttonHeight / 2);
   ctx.restore();
 
   gameState.restartBounds = { x, y, width: buttonWidth, height: buttonHeight };
@@ -2251,23 +2425,23 @@ function drawRestartButton() {
 // ------------------------------------------------------
 function updatePauseButton() {
   if (mobileControls.pause) {
-    mobileControls.pause.innerHTML = gameState.paused ? '▶' : 'II';
+    mobileControls.pause.innerHTML = gameState.paused ? "▶" : "II";
   }
 }
 
 function updateMobileButtonState(keyCode, isPressed) {
   switch (keyCode) {
-    case 'ArrowUp':
-      mobileControls.up?.classList.toggle('pressed', isPressed);
+    case "ArrowUp":
+      mobileControls.up?.classList.toggle("pressed", isPressed);
       break;
-    case 'ArrowLeft':
-      mobileControls.left?.classList.toggle('pressed', isPressed);
+    case "ArrowLeft":
+      mobileControls.left?.classList.toggle("pressed", isPressed);
       break;
-    case 'ArrowRight':
-      mobileControls.right?.classList.toggle('pressed', isPressed);
+    case "ArrowRight":
+      mobileControls.right?.classList.toggle("pressed", isPressed);
       break;
-    case 'Space':
-      mobileControls.shoot?.classList.toggle('pressed', isPressed);
+    case "Space":
+      mobileControls.shoot?.classList.toggle("pressed", isPressed);
       break;
   }
 }
@@ -2286,29 +2460,29 @@ function drawStartButton() {
   ctx.beginPath();
   drawRoundedRect(ctx, x, y, buttonWidth, buttonHeight, radius);
   ctx.save();
-  ctx.fillStyle = '#444';
-  ctx.strokeStyle = '#fff';
+  ctx.fillStyle = "#444";
+  ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = '#fff';
-  ctx.font = '24px Anta';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('START GAME', W / 2, y + buttonHeight / 2);
+  ctx.fillStyle = "#fff";
+  ctx.font = "24px Anta";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("START GAME", W / 2, y + buttonHeight / 2);
   ctx.restore();
 
   gameState.startBounds = { x, y, width: buttonWidth, height: buttonHeight };
 }
 
 function startGame() {
-  SoundManager.play('gameToggle');
+  SoundManager.play("gameToggle");
   gameState.gameStarted = true;
   canvas.focus();
 }
 
-canvas.addEventListener('click', e => {
+canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
@@ -2340,7 +2514,11 @@ canvas.addEventListener('click', e => {
   }
 
   // Fatal article link
-  if (gameState.gameOver && gameState.articleLinkBounds && gameState.fatalArticle) {
+  if (
+    gameState.gameOver &&
+    gameState.articleLinkBounds &&
+    gameState.fatalArticle
+  ) {
     const bounds = gameState.articleLinkBounds;
     if (
       x >= bounds.x &&
@@ -2348,14 +2526,17 @@ canvas.addEventListener('click', e => {
       y >= bounds.y &&
       y <= bounds.y + bounds.height
     ) {
-      const domain = gameState.fatalArticle.wiki.replace('wiki', '.wikipedia.org');
+      const domain = gameState.fatalArticle.wiki.replace(
+        "wiki",
+        ".wikipedia.org",
+      );
       const articleUrl = `https://${domain}/wiki/${encodeURIComponent(gameState.fatalArticle.title)}`;
-      window.open(articleUrl, '_blank');
+      window.open(articleUrl, "_blank");
     }
   }
 });
 
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
@@ -2368,7 +2549,7 @@ canvas.addEventListener('mousemove', e => {
       y >= bounds.y &&
       y <= bounds.y + bounds.height
     ) {
-      canvas.style.cursor = 'pointer';
+      canvas.style.cursor = "pointer";
       return;
     }
   }
@@ -2381,7 +2562,7 @@ canvas.addEventListener('mousemove', e => {
       y >= bounds.y &&
       y <= bounds.y + bounds.height
     ) {
-      canvas.style.cursor = 'pointer';
+      canvas.style.cursor = "pointer";
       return;
     }
   }
@@ -2394,40 +2575,40 @@ canvas.addEventListener('mousemove', e => {
       y >= bounds.y &&
       y <= bounds.y + bounds.height
     ) {
-      canvas.style.cursor = 'pointer';
+      canvas.style.cursor = "pointer";
       return;
     }
   }
-  canvas.style.cursor = 'default';
+  canvas.style.cursor = "default";
 });
 
 document.addEventListener(
-  'click',
+  "click",
   () => {
     if (SoundManager.soundPaths.thrust) {
       // Intentionally left blank to trigger sound
     }
   },
-  { once: true }
+  { once: true },
 );
 
 // ------------------------------------------------------
 // MUTE BUTTON
 // ------------------------------------------------------
 function addMuteButton() {
-  const muteButton = document.createElement('button');
-  muteButton.id = 'muteButton';
-  muteButton.className = 'gameButton';
-  muteButton.setAttribute('aria-label', 'Toggle sound');
-  muteButton.style.right = '50px';
+  const muteButton = document.createElement("button");
+  muteButton.id = "muteButton";
+  muteButton.className = "gameButton";
+  muteButton.setAttribute("aria-label", "Toggle sound");
+  muteButton.style.right = "50px";
 
   updateMuteButtonIcon(muteButton, SoundManager.muted);
-  muteButton.addEventListener('click', () => {
+  muteButton.addEventListener("click", () => {
     const isMuted = SoundManager.toggleMute();
     updateMuteButtonIcon(muteButton, isMuted);
   });
 
-  document.querySelector('.canvasContainer').appendChild(muteButton);
+  document.querySelector(".canvasContainer").appendChild(muteButton);
 }
 
 function updateMuteButtonIcon(button, isMuted) {
@@ -2440,32 +2621,33 @@ function updateMuteButtonIcon(button, isMuted) {
 // ON-SCREEN CONTROLS TOGGLE BUTTON
 // ------------------------------------------------------
 function addToggleControlsButton() {
-  const toggleButton = document.createElement('button');
-  toggleButton.id = 'toggleControlsButton';
-  toggleButton.className = 'gameButton';
-  toggleButton.setAttribute('aria-label', 'Toggle on-screen controls');
+  const toggleButton = document.createElement("button");
+  toggleButton.id = "toggleControlsButton";
+  toggleButton.className = "gameButton";
+  toggleButton.setAttribute("aria-label", "Toggle on-screen controls");
 
   const defaultVisible = window.innerWidth <= 900;
-  const controlsVisible = localStorage.getItem('controlsVisible') !== null
-    ? localStorage.getItem('controlsVisible') === 'true'
-    : defaultVisible;
+  const controlsVisible =
+    localStorage.getItem("controlsVisible") !== null
+      ? localStorage.getItem("controlsVisible") === "true"
+      : defaultVisible;
 
   updateToggleControlsIcon(toggleButton, controlsVisible);
 
   if (mobileControls) {
-    const mobileControlsDiv = document.getElementById('mobileControls');
+    const mobileControlsDiv = document.getElementById("mobileControls");
     if (mobileControlsDiv) {
-      mobileControlsDiv.style.display = controlsVisible ? 'block' : 'none';
+      mobileControlsDiv.style.display = controlsVisible ? "block" : "none";
     }
 
-    toggleButton.addEventListener('click', () => {
-      const isVisible = mobileControlsDiv.style.display !== 'none';
-      mobileControlsDiv.style.display = isVisible ? 'none' : 'block';
+    toggleButton.addEventListener("click", () => {
+      const isVisible = mobileControlsDiv.style.display !== "none";
+      mobileControlsDiv.style.display = isVisible ? "none" : "block";
       updateToggleControlsIcon(toggleButton, !isVisible);
-      localStorage.setItem('controlsVisible', !isVisible);
+      localStorage.setItem("controlsVisible", !isVisible);
     });
   }
-  document.querySelector('.canvasContainer').appendChild(toggleButton);
+  document.querySelector(".canvasContainer").appendChild(toggleButton);
 }
 
 function updateToggleControlsIcon(button, isVisible) {
@@ -2481,7 +2663,7 @@ function updateToggleControlsIcon(button, isVisible) {
        </svg>`;
 }
 
-document.head.appendChild(document.createElement('style'));
+document.head.appendChild(document.createElement("style"));
 
 addMuteButton();
 addToggleControlsButton();
@@ -2489,5 +2671,5 @@ addToggleControlsButton();
 const timeState = {
   lastTime: 0,
   deltaTime: 0,
-  currentTime: 0
+  currentTime: 0,
 };
