@@ -44,7 +44,13 @@ const GAME_CONFIG = {
   },
   WIKI: {
     SELECTED_WIKIS: new Set(
-      JSON.parse(localStorage.getItem("selectedWikis")) || ["enwiki"],
+      (() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem("selectedWikis"));
+          if (Array.isArray(stored)) return stored;
+        } catch {}
+        return ["enwiki"];
+      })(),
     ),
     WIKI_COUNTS: {},
   },
@@ -110,6 +116,7 @@ const objectPools = {
         y: 0,
         vx: 0,
         vy: 0,
+        speed: 0,
         traveledDistance: 0,
       }
     );
@@ -159,8 +166,9 @@ const gameState = {
 // DOM ELEMENTS
 // ------------------------------------------------------
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: false });
 const sidePanel = document.getElementById("sidePanel");
+const articleList = document.querySelector("#sidePanel .articleList");
 
 const mobileControls = {
   up: document.getElementById("btnUp"),
@@ -184,7 +192,6 @@ const player = {
   radius: 20,
   angle: 0,
   rotationSpeed: 0.05,
-  speed: 0,
   maxSpeed: 10,
   friction: 0.985,
   color: "#00ff00",
@@ -224,7 +231,6 @@ const SoundManager = {
     powerupSpawn: "audio/powerupSpawn.mp3",
   },
   volumes: {
-    hit: 0.7,
     pop: 0.4,
     laser: 0.3,
     laserTripleShot: 0.3,
@@ -241,10 +247,10 @@ const SoundManager = {
     powerupEnd: 0.4,
     powerupSpawn: 0.4,
   },
-  sounds: new Map(),
   muted: false,
   audioContext: null,
   buffers: new Map(),
+  gainNodes: new Map(),
   thrustSound: null,
   thrustGain: null,
 
@@ -276,13 +282,17 @@ const SoundManager = {
     if (this.muted || !this.audioContext || !this.buffers.has(soundName))
       return;
     try {
+      // One GainNode per sound
+      let gainNode = this.gainNodes.get(soundName);
+      if (!gainNode) {
+        gainNode = this.audioContext.createGain();
+        gainNode.gain.value = this.volumes[soundName] || 1.0;
+        gainNode.connect(this.audioContext.destination);
+        this.gainNodes.set(soundName, gainNode);
+      }
       const source = this.audioContext.createBufferSource();
-      const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = this.volumes[soundName] || 1.0;
-
       source.buffer = this.buffers.get(soundName);
       source.connect(gainNode);
-      gainNode.connect(this.audioContext.destination);
       source.start(0);
     } catch (error) {
       console.warn(`Failed to play sound: ${soundName}`, error);
@@ -367,12 +377,20 @@ function distanceSquared(x1, y1, x2, y2) {
 }
 
 function getCurrentAsteroidCount() {
-  return gameState.targets.filter((t) => t.isAsteroid).length;
+  let count = 0;
+  for (const t of gameState.targets) {
+    if (t.isAsteroid) count++;
+  }
+  return count;
 }
 
+const MAX_SIDEBAR_SNIPPETS = 100;
 function prependSnippet(snippetDiv) {
-  const articleList = document.querySelector("#sidePanel .articleList");
   articleList.insertBefore(snippetDiv, articleList.firstChild);
+  // Cap the edit log
+  while (articleList.children.length > MAX_SIDEBAR_SNIPPETS) {
+    articleList.lastElementChild.remove();
+  }
 }
 
 function wrapPosition(obj) {
@@ -854,24 +872,24 @@ const SnippetManager = {
         `;
       }
 
+      const extract = data.extract || "";
+      const extractText =
+        extract.length > 200 ? extract.substring(0, 200) + "..." : extract;
+
       snippetDiv.innerHTML = `
         <strong>
-          <a href="https://${domain}/wiki/${encodedTitle}" target="_blank">
-            ${target.title}
-          </a>${newTag}${langTag}
+          <a class="articleLink" href="https://${domain}/wiki/${encodedTitle}" target="_blank"></a>${newTag}${langTag}
         </strong>
         ${
           data.thumbnail
             ? `<img src="${data.thumbnail.source}" alt="Article Image" />`
             : ""
         }
-        <div>${
-          data.extract.length > 200
-            ? data.extract.substring(0, 200) + "..."
-            : data.extract || ""
-        }</div>
+        <div class="articleExtract"></div>
         ${extraHTML}
       `;
+      snippetDiv.querySelector(".articleLink").textContent = target.title;
+      snippetDiv.querySelector(".articleExtract").textContent = extractText;
       prependSnippet(snippetDiv);
     } catch (err) {
       console.error("Error handling snippet:", err);
@@ -1061,11 +1079,23 @@ const WIKI_TO_LANG = {
   fawiki: "FA",
 };
 
+// Count spans by wiki
+const wikiCountSpans = new Map();
+document.querySelectorAll(".wikiToggle input").forEach((checkbox) => {
+  wikiCountSpans.set(
+    checkbox.dataset.wiki,
+    checkbox.parentElement.querySelector(".articleCount"),
+  );
+});
+
 function handleWikiEvent(event) {
   if (document.hidden) return;
   // Mark stream as healthy on any received event
   EVENT_STREAM_CONFIG.lastEventTime = Date.now();
   reconnectAttempts = 0;
+
+  if (!gameState.gameStarted || gameState.paused || gameState.gameOver) return;
+
   try {
     const data = JSON.parse(event.data);
     if (data.bot) return;
@@ -1073,7 +1103,7 @@ function handleWikiEvent(event) {
 
     // Ignore events older than 5 seconds,
     // to avoid flood of events from lag or context switching
-    const eventTime = new Date(data.meta.dt).getTime();
+    const eventTime = Date.parse(data.meta.dt);
     const now = Date.now();
     if (now - eventTime > 5000) {
       return;
@@ -1081,36 +1111,32 @@ function handleWikiEvent(event) {
 
     const langCode =
       WIKI_TO_LANG[data.wiki] || data.wiki.replace("wiki", "").toUpperCase();
-    if (gameState.gameStarted && !gameState.paused && !gameState.gameOver) {
-      GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] =
-        (GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] || 0) + 1;
-      const countSpan = document.querySelector(
-        `.wikiToggle input[data-wiki="${data.wiki}"] + .articleCount`,
-      );
-      if (countSpan) {
-        countSpan.textContent = GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki];
-      }
+    GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] =
+      (GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki] || 0) + 1;
+    const countSpan = wikiCountSpans.get(data.wiki);
+    if (countSpan) {
+      countSpan.textContent = GAME_CONFIG.WIKI.WIKI_COUNTS[data.wiki];
+    }
 
-      if (data.type === "log" && data.log_type === "newusers") {
-        WikiEventHandler.handleNewUser(data, langCode);
-      } else if (data.namespace === 0) {
-        if (
-          data.type === "new" &&
-          !data.comment.toLowerCase().includes("redirect") &&
-          data.length.new > 150
-        ) {
-          SpawnManager.spawnPowerup(POWERUP_TYPES.HEART, data.title, {
-            lang: langCode,
-            wiki: data.wiki,
-            newArticle: true,
-          });
-        } else if (
-          data.length &&
-          data.length.old !== undefined &&
-          data.length.new !== undefined
-        ) {
-          WikiEventHandler.handleArticleEdit(data, langCode);
-        }
+    if (data.type === "log" && data.log_type === "newusers") {
+      WikiEventHandler.handleNewUser(data, langCode);
+    } else if (data.namespace === 0) {
+      if (
+        data.type === "new" &&
+        !data.comment.toLowerCase().includes("redirect") &&
+        data.length.new > 150
+      ) {
+        SpawnManager.spawnPowerup(POWERUP_TYPES.HEART, data.title, {
+          lang: langCode,
+          wiki: data.wiki,
+          newArticle: true,
+        });
+      } else if (
+        data.length &&
+        data.length.old !== undefined &&
+        data.length.new !== undefined
+      ) {
+        WikiEventHandler.handleArticleEdit(data, langCode);
       }
     }
   } catch (err) {
@@ -1252,22 +1278,17 @@ keyboardController.init();
 function initMobileControls() {
   const pointerDownEvents = ["mousedown", "touchstart"];
   const pointerUpEvents = ["mouseup", "touchend", "mouseleave", "touchcancel"];
-  let shootInterval = null;
 
   const startShooting = () => {
     if (!gameState.gameStarted && !gameState.gameOver) {
       startGame();
     } else if (!gameState.paused && !gameState.gameOver) {
-      shoot();
-      shootInterval = setInterval(shoot, 10);
+      gameState.keys.Space = true;
     }
   };
 
   const stopShooting = () => {
-    if (shootInterval) {
-      clearInterval(shootInterval);
-      shootInterval = null;
-    }
+    gameState.keys.Space = false;
   };
 
   pointerDownEvents.forEach((eventName) => {
@@ -1382,8 +1403,6 @@ function spawnFinalExplosion(x, y) {
     spark.vx = Math.cos(angle) * velocity;
     spark.vy = Math.sin(angle) * velocity;
     spark.life = lifetime;
-    spark.maxLife = lifetime;
-    spark.size = 4 + Math.random() * 4;
 
     sparks.push(spark);
   }
@@ -1396,6 +1415,7 @@ function spawnFinalExplosion(x, y) {
 // ------------------------------------------------------
 const gamepadController = {
   deadzone: 0.1,
+  thrustThreshold: 0.5,
   startLock: false,
   shootStartLock: false,
   thrustStartLock: false,
@@ -1443,7 +1463,7 @@ const gamepadController = {
     const thrustPressed =
       gamepad.buttons[0]?.pressed ||
       gamepad.buttons[12]?.pressed ||
-      (gamepad.axes[1] ?? 0) < -this.deadzone;
+      (gamepad.axes[1] ?? 0) < -this.thrustThreshold;
     if (!gameState.gameStarted || gameState.gameOver) {
       if (shootPressed && !this.shootStartLock) {
         gameState.gameOver ? restartGame() : startGame();
@@ -1483,7 +1503,7 @@ const gamepadController = {
     const dpadUp = gamepad.buttons[12]?.pressed;
     const buttonA = gamepad.buttons[0]?.pressed;
 
-    if (leftY < -this.deadzone || buttonA || dpadUp) {
+    if (leftY < -this.thrustThreshold || buttonA || dpadUp) {
       gameState.keysGamepad.ArrowUp = true;
     } else {
       gameState.keysGamepad.ArrowUp = false;
@@ -1542,8 +1562,9 @@ function update(dt) {
   }
 
   // Apply friction
-  player.vx *= Math.pow(player.friction, dt * 60);
-  player.vy *= Math.pow(player.friction, dt * 60);
+  const frictionFactor = Math.pow(player.friction, dt * 60);
+  player.vx *= frictionFactor;
+  player.vy *= frictionFactor;
 
   // Limit maxi speed
   const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
@@ -1604,18 +1625,11 @@ function update(dt) {
   // Update bullets
   for (let i = player.bullets.length - 1; i >= 0; i--) {
     const bullet = player.bullets[i];
-    const oldX = bullet.x;
-    const oldY = bullet.y;
-
     bullet.x += bullet.vx * dt * 60;
     bullet.y += bullet.vy * dt * 60;
     wrapPosition(bullet);
 
-    if (bullet.traveledDistance === undefined) bullet.traveledDistance = 0;
-    const dxFrame = bullet.x - oldX;
-    const dyFrame = bullet.y - oldY;
-    const distFrame = Math.sqrt(dxFrame * dxFrame + dyFrame * dyFrame);
-    bullet.traveledDistance += distFrame;
+    bullet.traveledDistance += bullet.speed * dt * 60;
 
     if (bullet.traveledDistance > GAME_CONFIG.GAMEPLAY.BULLET_MAX_DISTANCE) {
       const removedBullet = player.bullets.splice(i, 1)[0];
@@ -1823,7 +1837,8 @@ function update(dt) {
 // ------------------------------------------------------
 function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, W, H);
 
   if (gameState.gameOver) {
     drawGameOver();
@@ -1939,40 +1954,16 @@ function drawGameOver() {
 function drawPlayer() {
   const cos = Math.cos(player.angle);
   const sin = Math.sin(player.angle);
-
-  // Original player triangle points
-  const points = [
-    { x: player.radius, y: 0 },
-    { x: -player.radius, y: player.radius / 2 },
-    { x: -player.radius, y: -player.radius / 2 },
-  ];
-
-  // Rotate and translate
-  const worldPoints = points.map((p) => ({
-    x: player.x + (p.x * cos - p.y * sin),
-    y: player.y + (p.x * sin + p.y * cos),
-  }));
-
-  // Thrust flame
+  const { x, y, radius } = player;
+  // worldX = x + px*cos - py*sin, worldY = y + px*sin + py*cos
+  // Thrust flame: local points (-r, ±0.3r) and (-r-10, 0)
   if (gameState.keys.ArrowUp || gameState.keysGamepad.ArrowUp) {
-    // Thrust flame triangle points
-    const thrustPoints = [
-      { x: -player.radius, y: player.radius * 0.3 },
-      { x: -player.radius - 10, y: 0 },
-      { x: -player.radius, y: -player.radius * 0.3 },
-    ];
-
-    // Rotate and translate
-    const worldThrustPoints = thrustPoints.map((p) => ({
-      x: player.x + (p.x * cos - p.y * sin),
-      y: player.y + (p.x * sin + p.y * cos),
-    }));
-
+    const flare = radius * 0.3;
     ctx.fillStyle = "orange";
     ctx.beginPath();
-    ctx.moveTo(worldThrustPoints[0].x, worldThrustPoints[0].y);
-    ctx.lineTo(worldThrustPoints[1].x, worldThrustPoints[1].y);
-    ctx.lineTo(worldThrustPoints[2].x, worldThrustPoints[2].y);
+    ctx.moveTo(x - radius * cos - flare * sin, y - radius * sin + flare * cos);
+    ctx.lineTo(x - (radius + 10) * cos, y - (radius + 10) * sin);
+    ctx.lineTo(x - radius * cos + flare * sin, y - radius * sin - flare * cos);
     ctx.closePath();
     ctx.fill();
   }
@@ -1984,12 +1975,13 @@ function drawPlayer() {
     }
   }
 
-  // Draw player triangle
+  // Player triangle: nose (r, 0), wings (-r, ±r/2)
+  const half = radius * 0.5;
   ctx.fillStyle = player.color;
   ctx.beginPath();
-  ctx.moveTo(worldPoints[0].x, worldPoints[0].y);
-  ctx.lineTo(worldPoints[1].x, worldPoints[1].y);
-  ctx.lineTo(worldPoints[2].x, worldPoints[2].y);
+  ctx.moveTo(x + radius * cos, y + radius * sin);
+  ctx.lineTo(x - radius * cos - half * sin, y - radius * sin + half * cos);
+  ctx.lineTo(x - radius * cos + half * sin, y - radius * sin - half * cos);
   ctx.closePath();
   ctx.fill();
 
@@ -2158,6 +2150,7 @@ function shoot() {
     bullet.y = player.y + Math.sin(angle) * player.radius;
     bullet.vx = bulletSpeed * Math.cos(angle);
     bullet.vy = bulletSpeed * Math.sin(angle);
+    bullet.speed = bulletSpeed;
     bullet.traveledDistance = 0;
     return bullet;
   };
@@ -2271,37 +2264,13 @@ const canvasContainer = document.querySelector(".canvasContainer");
 
 function toggleFullscreen() {
   const container = canvasContainer;
-  const isFull =
-    document.fullscreenElement ||
-    document.webkitFullscreenElement ||
-    document.mozFullScreenElement ||
-    document.msFullscreenElement ||
-    container.classList.contains("fullscreen");
 
-  if (isFull) {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else if (document.webkitFullscreenElement) {
-      document.webkitExitFullscreen();
-    } else if (document.mozFullScreenElement) {
-      document.mozCancelFullScreen();
-    } else if (document.msFullscreenElement) {
-      document.msExitFullscreen();
-    }
+  if (container.classList.contains("fullscreen")) {
     container.classList.remove("fullscreen");
     document.body.style.overflow = "";
   } else {
     container.classList.add("fullscreen");
     document.body.style.overflow = "hidden";
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else if (document.webkitFullscreenElement) {
-      document.webkitExitFullscreen();
-    } else if (document.mozFullScreenElement) {
-      document.mozCancelFullScreen();
-    } else if (document.msFullscreenElement) {
-      document.msExitFullscreen();
-    }
     canvas.focus();
   }
 }
@@ -2354,10 +2323,7 @@ function resetGameState() {
   gameState.gameOverTimer = 0;
 
   // Clear sidebar articles and stats
-  const articleList = document.querySelector("#sidePanel .articleList");
-  if (articleList) {
-    articleList.innerHTML = "";
-  }
+  articleList.innerHTML = "";
   Object.keys(GAME_CONFIG.WIKI.WIKI_COUNTS).forEach((wiki) => {
     GAME_CONFIG.WIKI.WIKI_COUNTS[wiki] = 0;
   });
@@ -2375,7 +2341,6 @@ function resetGameState() {
   player.x = GAME_CONFIG.CANVAS.WIDTH / 2;
   player.y = GAME_CONFIG.CANVAS.HEIGHT / 2;
   player.angle = 0;
-  player.speed = 0;
   player.bullets = [];
   player.shieldFrames = 0;
   player.fasterFireFrames = 0;
@@ -2582,16 +2547,6 @@ canvas.addEventListener("mousemove", (e) => {
   canvas.style.cursor = "default";
 });
 
-document.addEventListener(
-  "click",
-  () => {
-    if (SoundManager.soundPaths.thrust) {
-      // Intentionally left blank to trigger sound
-    }
-  },
-  { once: true },
-);
-
 // ------------------------------------------------------
 // MUTE BUTTON
 // ------------------------------------------------------
@@ -2662,8 +2617,6 @@ function updateToggleControlsIcon(button, isVisible) {
          <path fill="#fff" d="M22 2L2 22" stroke="#fff" stroke-width="3"/>
        </svg>`;
 }
-
-document.head.appendChild(document.createElement("style"));
 
 addMuteButton();
 addToggleControlsButton();
